@@ -1,81 +1,133 @@
-# Ootique 통합 앱 제작 & 애플 앱스토어 출시 마스터 매뉴얼
+# Ootique 제작 및 애플 출시 매뉴얼
 
-> **최종 갱신**: 2026-08-04  
-> **기준 저장소**: `c:\workspace\projects\ootique`  
-> **목적**: 김이현 Starter Kit의 1인 개발 표준 파이프라인과 Ootique의 시나리오 및 배포 자원을 합쳐, 차례대로 검증하고 앱스토어 심사까지 안전하게 완주하는 종합 마스터 매뉴얼입니다.
-
----
-
-## 📌 규칙 준수 체크리스트 (Always Keep in Mind)
-
-1. **시작 전 필수 읽기**: 코드를 수정하거나 작업을 시작하기 전 반드시 `docs/git-strategy.md`, `docs/spec.md`, `docs/decisions.md`를 읽을 것.
-2. **기존 로직 보호**: `docs/spec.md`에 명시된 기존 완성 기능의 로직을 함부로 수정하지 말 것.
-3. **1파일 1컴포넌트**: 하나의 파일에는 하나의 컴포넌트만 존재하게 모듈화.
-4. **과도한 추상화 금지**: 직관적이고 명확한 TS/TSX 코드 작성.
+> **최종 갱신**: 2026-08-04
+> **기준 저장소**: `c:\workspace\projects\ootique`
+> **범위**: 이 저장소에서 실제로 칠 명령과 통과 기준. 애플 출시 절차 일반론은
+> `C:\workspace\260724\REALM\자료\애플 앱스토어 출시 매뉴얼.md` 하나에 있고 여기 복사하지 않는다.
 
 ---
 
-## 🚀 Phase 1. 기본 인프라 및 아키텍처 정립 (Foundation)
+## 규칙
 
-- [x] **Expo SDK 54 환경 검증**: `npm run check` 및 `npx expo-doctor` 18/18 통과
-- [x] **기본 안전영역(Safe Area)**: `react-native-safe-area-context` 적용으로 iOS Notch 및 안드로이드 시스템 바 미겹침 처리
-- [ ] **`App.tsx` 모듈화 (1파일 1컴포넌트)**:
-  - 거대한 monolithic UI를 `src/components/`로 분리
-  - `RouletteSection.tsx` (오늘의 컬러 룰렛 애니메이션)
-  - `PhotoCaptureCard.tsx` (혼자/친구 사진 촬영 및 기기 보관 카드)
-  - `FriendCodeModal.tsx` (6자리 코드 생성, 자동 복사, 6/6 입력 및 승인)
-  - `PlusBanner.tsx` (Ootique Plus 인앱결제 및 7일 정리 안내)
+1. 작업 전 `docs/git-strategy.md`, `docs/spec.md`, `docs/decisions.md`를 읽는다.
+2. `docs/spec.md`의 완성 기능 로직을 함부로 바꾸지 않는다.
+3. 1파일 1컴포넌트. 25줄 미만 공용 조각만 `src/components/ui.tsx`에 모은다 (ADR-005).
+4. 과도한 추상화 금지. 직관적인 TS/TSX로 쓴다.
+5. **자동 검사 통과를 동작 확인이라고 보고하지 않는다.** 아래 검사 종류를 구분한다.
 
 ---
 
-## 🧪 Phase 2. 앱 핵심 시나리오 단계별 수동 검증 (Scenario Verification)
+## 검사 세 종류 — 무엇을 증명하는지 다르다
 
-### Step 2.1: 혼자 모드 (Solo Mode)
-1. 앱 실행 시 날짜(YYYY-MM-DD) 기반 동일 헥사코드와 컬러 룰렛이 동작하는가?
-2. 카메라/앨범에서 사진을 고르고 기기 저장소에 저장되는가?
-3. 카드 클릭 시 공유 시트(iOS Share Sheet)가 정상 호출되는가?
+이걸 섞어서 "잘 동작한다"고 말해 2026-08-03에 하루를 잃었다.
 
-### Step 2.2: 친구 동기화 모드 (Friend Sync 6-Digit Code)
-1. **사용자 A**: `친구와` 선택 후 6자리 코드 생성 → 클립보드 복사 안내 출력.
-2. **사용자 B**: 코드 입력칸에 붙여넣기 (`6/6` 확인) 후 참가 요청.
-3. **사용자 A**: 승인 클릭 후 방 상태가 `active`로 전환.
-4. **사진 자동 동기화**: A가 사진 등록 시 5초 이내 B 화면의 상대 사진 칸에 자동 표시.
-5. **A/B 공유 카드**: 두 사진이 모두 모이면 2인 A/B 결합 공유 카드 생성 버튼 활성화.
+- `npm run check` — **소스와 설정만 본다.** 타입, 도메인 순수함수, 소스 불변식, 출시 설정, Expo Doctor.
+  `scripts/friend-sync-check.mjs`는 서버를 호출하지 않는다. 깨진 앱에서도 통과한다.
+- `npm run test:friend-sync:e2e` — **배포된 Edge Function을 실제로 호출한다.** 서버가 정상인지 증명한다.
+  앱 화면이 맞는지는 증명하지 못한다. 네트워크와 실 프로젝트를 쓴다.
+- **두 기기 수동 확인** — 화면에 실제로 보이는지 증명한다. 위 둘로 대체할 수 없다.
 
-### Step 2.3: 로컬 7일 자동 정리 & Ootique Plus 결제
-1. **무료 권한**: 최근 7일(오늘 포함) 데이터만 남고 8일째 기록 자동 정리.
-2. **Plus 구매 (`com.lodim.ootique.plus` 4,900원)**:
-   - 구매 성공 시 `isPlusUser = true` 판정 및 StoreKit 영수증 기록.
-   - 8일째 자동 정리 면제 확인.
-3. **구매 복원 (Restore)**: 앱 재실행 또는 `구매 복원` 클릭 시 Apple 계정 영수증으로 Plus 상태 복구.
+```bash
+cd c:\workspace\projects\ootique && npm run check
+```
+
+```bash
+cd c:\workspace\projects\ootique && npm run test:friend-sync:e2e
+```
 
 ---
 
-## 🎨 Phase 3. 자산 최적화 & Stitch 디자인 반영 (Assets & Polish)
+## Phase 1. 기반 (완료)
 
-- [ ] **1024×1024 메인 앱 아이콘**: `assets/icon.png` 교체
-- [ ] **iOS 스플래시 이미지**: `assets/splash-icon.png` 교체
-- [ ] **Stitch 디자인 토큰**: 최종 색상, 로고, 룰렛 자산 UI 테마 적용
-
----
-
-## 📱 Phase 4. 애플 앱스토어 Connect 심사 제출 (Release & Submission)
-
-### Checklist
-1. **App Store Connect 앱 생성**: 번들 ID `com.lodim.ootique`, SKU `ootique-ios-001`
-2. **비소모성 인앱결제 생성**: 상품 ID `com.lodim.ootique.plus`, 가격 4,900원, 스크린샷 첨부
-3. **EAS Production 빌드**:
-   ```bash
-   npx eas build --platform ios --profile production
-   ```
-4. **App Store 제출 & 메타데이터**:
-   - `docs/app-store-metadata.md` 내용 입력
-   - Privacy Policy & Support URL 연결 (GitHub Pages 또는 전용 지원 페이지)
-   - 인앱결제 1회 구매 상품 동시 제출 선택 후 최종 심사 요청.
+- [x] Expo SDK 54 — iPhone Expo Go 호환. `npx expo-doctor` 18/18
+- [x] 안전영역 — `react-native-safe-area-context` 5.6, 안드로이드 실기기 확인
+- [x] 날짜 기반 오늘의 컬러, 6자리 친구 코드 규칙
+- [x] 카메라·앨범, 기기 내부 사진 보관, 최근 7일 기록
+- [x] `expo-iap` 5.0.0, `com.lodim.ootique.plus` 비소모성 구매·복원
+- [x] Supabase 친구 동기화 (비공개 Storage, Edge Function, SecureStore 토큰)
+- [x] `App.tsx` 모듈화 — `src/theme.ts`, `src/components/`로 분리
 
 ---
 
-## 🔄 매뉴얼 업데이트 절차 (Manual Update Process)
+## Phase 2. 시나리오 수동 검증
 
-1. 기능 개발 중 계획이나 비즈니스 로직에 수정이 생기면 **먼저 이 매뉴얼과 `PROJECT_STATUS.md`를 갱신**합니다.
-2. 갱신된 내용을 바탕으로 코드 작업을 진행하여 문서와 실증 상태의 불일치를 100% 방지합니다.
+### 2.1 혼자 모드
+
+1. 앱 실행 → 같은 날짜에 같은 헥사코드와 룰렛이 나오는가
+2. 카메라/앨범에서 사진을 고르면 기기에 저장되는가
+3. 공유 카드에서 iOS 공유 시트가 열리는가
+4. 앱을 껐다 켜도 기록이 남는가
+
+### 2.2 친구 모드 — **두 기기가 필요하다**
+
+1. A: `친구와` → `코드 만들기` → 클립보드 자동 복사 안내
+2. B: `코드 붙여넣기` → `6/6` 표시 → `친구 코드로 연결`
+3. A: `친구 참가 승인` → 양쪽 `친구 연결 완료`
+4. A가 사진 저장 → **5초 안에 B의 `친구 OOTD` 칸에 자동 표시**
+5. B가 사진 저장 → **A의 화면에도 자동 표시**
+6. 두 장이 모이면 A/B 공유 카드 버튼이 열리는가
+7. 한쪽이 사진을 교체하면 상대 화면도 바뀌는가
+8. 앱을 껐다 켜도 저장된 기록의 친구 사진이 열리는가
+
+> 8번이 핵심이다. 친구 사진을 서버 URL로 들고 있으면 세션이 끝난 뒤 안 열린다.
+> 2026-08-04에 이 경로를 기기 파일 저장으로 바꿨다 (`downloadPhoto`).
+
+### 2.3 7일 정리와 Ootique Plus
+
+**Expo Go에서는 결제를 시험할 수 없다.** 개발 빌드가 필요하다.
+
+```bash
+cd c:\workspace\projects\ootique && npx eas build --platform ios --profile device
+```
+
+1. 무료: 오늘 포함 최근 7일만 남고 8일째 기록이 정리되는가
+2. 구매 성공 → `isPlusUser` 판정, 8일째 정리 면제
+3. 구매 취소·실패·보류를 각각 구분해 안내하는가
+4. `구매 복원` 또는 앱 재실행으로 Plus가 살아나는가
+
+---
+
+## Phase 3. 자산
+
+- [ ] `assets/icon.png` 1024×1024 교체 — **기본 Expo 아이콘으로 제출하면 반려된다.** 알파 채널 없이
+- [ ] `assets/splash-icon.png` 교체
+- [ ] Stitch 최종 디자인의 색상·로고·룰렛 자산 반영
+- [ ] 스크린샷 4장 — 오늘의 컬러 / OOTD 결과 / A/B 공유 카드 / 기록+Plus
+
+```bash
+cd c:\workspace\projects\ootique && npm run check:release
+```
+
+---
+
+## Phase 4. 출시
+
+절차와 함정은 `자료\애플 앱스토어 출시 매뉴얼.md`에 있다. 이 저장소에서 할 일만 적는다.
+
+- [ ] GitHub `lodimSign/ootique` 저장소 생성, Pages 소스를 `docs/`로 지정
+- [ ] `https://lodimsign.github.io/ootique/#privacy` 와 `#support` 가 실제로 열리는지 확인
+- [ ] `eas init` — 소유 계정을 개인과 `lodimsigns-team` 중 확정한 뒤
+- [ ] App Store Connect 앱 생성 마무리, `com.lodim.ootique.plus` 4,900원 상품 생성
+- [ ] `docs/app-store-metadata.md` 내용 입력 — **개인정보 표시는 그 문서의 갱신본을 쓴다**
+- [ ] production 빌드 및 제출
+
+```bash
+cd c:\workspace\projects\ootique && npx eas build --platform ios --profile production
+```
+
+```bash
+cd c:\workspace\projects\ootique && npx eas submit --platform ios
+```
+
+---
+
+## 매뉴얼 갱신 절차
+
+계획이나 비즈니스 로직이 바뀌면 **코드보다 이 문서와 `PROJECT_STATUS.md`를 먼저 고친다.**
+문서와 실제 상태가 어긋나면 다음 세션이 잘못된 전제로 작업한다.
+
+기능을 추가한 날 같이 열어야 하는 문서:
+
+- 서버·저장소·수집 항목이 바뀌면 → `docs/app-store-metadata.md` 개인정보 표시 + `docs/index.html` 처리방침
+- 검증 방법이 바뀌면 → 이 문서의 "검사 세 종류"
+- 되돌릴 수 없는 결정을 내리면 → `docs/decisions.md`에 ADR 추가
