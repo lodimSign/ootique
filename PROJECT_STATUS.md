@@ -25,7 +25,8 @@
 - 친구 코드 생성 성공 시 클립보드 자동 복사와 메신저 붙여넣기 안내
 - 6자리 전체 표시, `6/6` 확인, 앱 내부 `코드 붙여넣기` 버튼
 - 필수 규정 문서 정립 (`docs/spec.md`, `docs/git-strategy.md`, `docs/decisions.md`)
-- 김이현 Starter Kit 파이프라인 기반 Ootique 마스터 매뉴얼 정립 (`docs/app-development-manual.md`)
+- 실행 명령과 통과 기준을 붙인 제작 매뉴얼 (`docs/app-development-manual.md`), 재사용용 애플 출시 매뉴얼은 `C:\workspace\260724\REALM\자료\애플 앱스토어 출시 매뉴얼.md`
+- `App.tsx` 1,200줄을 592줄로 줄이고 화면·공용 조각을 `src/components/`와 `src/theme.ts`로 분리 (ADR-005~006)
 
 ## 다음 작업
 
