@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
-import type { OotdRecord } from './domain';
+import { uploadResizeTarget, type OotdRecord } from './domain';
 
 const ROOT_DIRECTORY = `${FileSystem.documentDirectory}ootique/`;
 const PHOTO_DIRECTORY = `${ROOT_DIRECTORY}photos/`;
@@ -53,10 +54,16 @@ export async function downloadPhoto(
   return destination;
 }
 
-export async function writeTemporaryJpeg(base64: string): Promise<string> {
-  const destination = `${FileSystem.cacheDirectory}ootique-friend-upload.jpg`;
-  await FileSystem.writeAsStringAsync(destination, base64, { encoding: FileSystem.EncodingType.Base64 });
-  return destination;
+// 사진 선택기는 PNG 스크린샷이나 고해상도 원본을 그대로 넘긴다. friend-sync 서버는 진짜 JPEG를
+// 320~4096px 안에서만 받으므로, 올리기 전에 항상 JPEG로 다시 인코딩하고 긴 변을 줄인다.
+export async function toUploadJpeg(uri: string): Promise<string> {
+  const source = await ImageManipulator.manipulate(uri).renderAsync();
+  const target = uploadResizeTarget(source.width, source.height);
+  const rendered = target
+    ? await ImageManipulator.manipulate(source).resize(target).renderAsync()
+    : source;
+  const saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.7 });
+  return saved.uri;
 }
 
 export async function upsertRecord(record: OotdRecord): Promise<OotdRecord[]> {

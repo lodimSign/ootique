@@ -102,6 +102,22 @@ export function createFriendCode(now = Date.now(), random = Math.random()): stri
   return code;
 }
 
+// friend-sync 서버는 320~4096px 사이의 JPEG만 받는다. 긴 변을 1600으로 줄이되,
+// 그렇게 하면 짧은 변이 하한 밑으로 내려가는 파노라마는 원본 그대로 둔다.
+export const UPLOAD_MAX_SIDE = 1600;
+const UPLOAD_MIN_SIDE = 320;
+
+export function uploadResizeTarget(
+  width: number,
+  height: number,
+): { width: number } | { height: number } | null {
+  const longSide = Math.max(width, height);
+  const shortSide = Math.min(width, height);
+  if (longSide <= UPLOAD_MAX_SIDE) return null;
+  if ((shortSide * UPLOAD_MAX_SIDE) / longSide < UPLOAD_MIN_SIDE) return null;
+  return width >= height ? { width: UPLOAD_MAX_SIDE } : { height: UPLOAD_MAX_SIDE };
+}
+
 export function recordId(dateKey: string, mode: ChallengeMode, friendCode = ''): string {
   return `${dateKey}-${mode}-${mode === 'friend' ? normalizeFriendCode(friendCode) : 'solo'}`;
 }

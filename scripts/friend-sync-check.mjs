@@ -36,7 +36,8 @@ assert.match(app, /Clipboard\.setStringAsync\(session\.inviteCode\)/);
 assert.match(app, /Clipboard\.getStringAsync\(\)/);
 assert.match(app, /props\.friendCode\.length}\/6/);
 assert.doesNotMatch(app, /친구 사진 선택/);
-assert.match(app, /writeTemporaryJpeg\(result\.assets\[0\]\.base64\)/);
+// 고른 사진을 그대로 올리면 PNG 스크린샷·고해상도 원본이 서버에서 invalid_photo로 막힌다.
+assert.match(app, /toUploadJpeg\(result\.assets\[0\]\.uri\)/);
 assert.match(app, /friendSessionMatchesCode\(friendSession\.inviteCode, normalizedCode\)/);
 assert.match(app, /friendState\?\.pairId === matchingFriendSession\.pairId/);
 assert.match(app, /getFriendState\(matchingFriendSession\)/);

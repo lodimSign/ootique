@@ -29,8 +29,8 @@ import {
   pruneExpiredRecords,
   removeAllData,
   removeRecord,
+  toUploadJpeg,
   upsertRecord,
-  writeTemporaryJpeg,
 } from './src/storage';
 import { PLUS_PRODUCT_ID, hasPlusPurchase, purchaseErrorMessage } from './src/purchases';
 import {
@@ -349,22 +349,17 @@ function OotiqueApp() {
 
       const result =
         source === 'camera'
-          ? await ImagePicker.launchCameraAsync({ base64: mode === 'friend', mediaTypes: ['images'], quality: mode === 'friend' ? 0.7 : 0.9 })
+          ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.9 })
           : await ImagePicker.launchImageLibraryAsync({
-              base64: mode === 'friend',
               mediaTypes: ['images'],
               preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
-              quality: mode === 'friend' ? 0.7 : 0.9,
+              quality: 0.9,
             });
 
       if (!result.canceled) {
         if (target === 'mine') {
           setMineUri(result.assets[0].uri);
-          setMineUploadUri(
-            mode === 'friend' && result.assets[0].base64
-              ? await writeTemporaryJpeg(result.assets[0].base64)
-              : null,
-          );
+          setMineUploadUri(mode === 'friend' ? await toUploadJpeg(result.assets[0].uri) : null);
         }
         else setFriendUri(result.assets[0].uri);
       }
@@ -480,8 +475,10 @@ function OotiqueApp() {
       setRecords(await upsertRecord(record));
       setActiveRecord(record);
       setScreen('share');
-    } catch {
-      Alert.alert('사진을 저장하지 못했어요', '기기 저장 공간을 확인한 뒤 다시 시도해 주세요.');
+    } catch (error) {
+      // 원인을 삼키면 실기기에서 서버 거절(invalid_photo 등)과 기기 저장 실패를 구분할 수 없다.
+      const reason = error instanceof Error ? error.message : String(error);
+      Alert.alert('사진을 저장하지 못했어요', `${reason}\n\n네트워크와 기기 저장 공간을 확인한 뒤 다시 시도해 주세요.`);
     } finally {
       setOperationBusy(false);
     }

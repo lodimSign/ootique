@@ -10,6 +10,7 @@ import {
   localDateKey,
   normalizeFriendCode,
   recordId,
+  uploadResizeTarget,
 } from '../src/domain.ts';
 import { PLUS_PRODUCT_ID, hasPlusPurchase, purchaseErrorMessage } from '../src/purchases.ts';
 
@@ -24,6 +25,12 @@ assert.equal(friendSessionMatchesCode(undefined, ''), false);
 assert.equal(createFriendCode(123, () => 0.5).length, 6);
 assert.equal(recordId('2026-08-03', 'solo'), '2026-08-03-solo-solo');
 assert.equal(recordId('2026-08-03', 'friend', 'ab-12cd'), '2026-08-03-friend-AB12CD');
+
+assert.equal(uploadResizeTarget(1200, 900), null);
+assert.deepEqual(uploadResizeTarget(4032, 3024), { width: 1600 });
+assert.deepEqual(uploadResizeTarget(3024, 4032), { height: 1600 });
+assert.deepEqual(uploadResizeTarget(8160, 6120), { width: 1600 });
+assert.equal(uploadResizeTarget(8000, 1000), null);
 
 const first = colorForChallenge('2026-08-03', 'friend', 'ab12cd');
 const second = colorForChallenge('2026-08-03', 'friend', 'AB12CD');
