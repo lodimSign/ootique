@@ -37,6 +37,7 @@ import {
 } from './src/domain';
 import {
   copyPhoto,
+  downloadPhoto,
   loadRecords,
   pruneExpiredRecords,
   removeAllData,
@@ -89,7 +90,6 @@ function OotiqueApp() {
   const [mineUri, setMineUri] = useState<string | null>(null);
   const [mineUploadUri, setMineUploadUri] = useState<string | null>(null);
   const [friendUri, setFriendUri] = useState<string | null>(null);
-  const [friendHeaders, setFriendHeaders] = useState<Record<string, string> | undefined>();
   const [friendSession, setFriendSession] = useState<FriendSession | null>(null);
   const [friendState, setFriendState] = useState<FriendState | null>(null);
   const [friendBusy, setFriendBusy] = useState(false);
@@ -186,13 +186,16 @@ function OotiqueApp() {
         const partnerPhoto = state.photos.find((photo) => photo.slot === partnerSlot && photo.available);
         if (partnerPhoto) {
           const source = friendPhotoSource(matchingFriendSession, partnerSlot, partnerPhoto.version);
-          setFriendUri(source.uri);
-          setFriendHeaders(source.headers);
+          const localUri = await downloadPhoto(
+            source,
+            `friend-${matchingFriendSession.pairId}-${partnerSlot}-${partnerPhoto.version}`,
+          );
+          if (cancelled) return;
+          setFriendUri(localUri);
         } else {
           setFriendUri(null);
-          setFriendHeaders(undefined);
         }
-      } catch { /* A temporary network failure must not erase the saved session. */ }
+      } catch { /* A temporary network failure must not erase the saved session or the shown photo. */ }
     };
     refresh();
     const timer = setInterval(refresh, 5_000);
@@ -347,7 +350,8 @@ function OotiqueApp() {
     }
     setMineUri(todayRecord?.photoUri ?? null);
     setMineUploadUri(null);
-    setFriendUri(todayRecord?.partnerPhotoUri ?? null);
+    // 친구 사진은 폴링이 관리한다. 여기서 기록값으로 덮으면 방금 받은 친구 사진이 사라진다.
+    if (mode !== 'friend') setFriendUri(null);
     setScreen('capture');
   };
 
@@ -398,7 +402,6 @@ function OotiqueApp() {
       setFriendSession(session);
       setFriendState(null);
       setFriendUri(null);
-      setFriendHeaders(undefined);
       setFriendCode(session.inviteCode ?? '');
       setRevealed(false);
       if (session.inviteCode) {
@@ -422,7 +425,6 @@ function OotiqueApp() {
       setFriendSession(session);
       setFriendState(null);
       setFriendUri(null);
-      setFriendHeaders(undefined);
       Alert.alert('참가 요청을 보냈어요', '코드를 만든 친구가 승인하면 사진이 자동 연결돼요.');
     } catch {
       Alert.alert('친구에게 연결하지 못했어요', '코드가 만료됐거나 이미 사용됐는지 확인해 주세요.');
@@ -481,7 +483,7 @@ function OotiqueApp() {
       const savedMineUri = mineUri === todayRecord?.photoUri ? mineUri : await copyPhoto(mineUri, `${id}-mine`);
       const savedFriendUri =
         mode === 'friend' && friendUri
-          ? friendUri
+          ? await copyPhoto(friendUri, `${id}-friend`)
           : undefined;
       const record: OotdRecord = {
         id,
@@ -577,7 +579,6 @@ function OotiqueApp() {
             setFriendCode(normalizeFriendCode(value));
             setFriendState(null);
             setFriendUri(null);
-            setFriendHeaders(undefined);
             setRevealed(false);
           }}
           onGenerateCode={createPair}
@@ -606,7 +607,6 @@ function OotiqueApp() {
           colorName={color.name}
           mineUri={mineUri}
           friendUri={friendUri}
-          friendHeaders={friendHeaders}
           friendStatus={currentFriendStatus}
           busy={busy}
           onBack={() => setScreen('today')}
@@ -617,7 +617,6 @@ function OotiqueApp() {
       {screen === 'share' && activeRecord && (
         <ShareScreen
           record={activeRecord}
-          friendHeaders={friendHeaders}
           onBack={() => setScreen('today')}
           onHistory={() => setScreen('history')}
         />
@@ -797,7 +796,6 @@ type CaptureScreenProps = {
   colorName: string;
   mineUri: string | null;
   friendUri: string | null;
-  friendHeaders?: Record<string, string>;
   friendStatus: FriendSession['status'] | FriendState['status'] | null;
   busy: boolean;
   onBack: () => void;
@@ -819,7 +817,7 @@ function CaptureScreen(props: CaptureScreenProps) {
 
       {props.mode === 'friend' && (
         <>
-          <PhotoFrame compact headers={props.friendHeaders} label="친구 OOTD" uri={props.friendUri} />
+          <PhotoFrame compact label="친구 OOTD" uri={props.friendUri} />
           {!props.friendUri && <Text style={styles.captureGuide}>친구가 사진을 올리면 자동으로 표시돼요.</Text>}
         </>
       )}
@@ -845,11 +843,11 @@ function CaptureScreen(props: CaptureScreenProps) {
   );
 }
 
-function PhotoFrame({ compact = false, headers, label, uri }: { compact?: boolean; headers?: Record<string, string>; label: string; uri: string | null }) {
+function PhotoFrame({ compact = false, label, uri }: { compact?: boolean; label: string; uri: string | null }) {
   return (
     <View style={[styles.photoFrame, compact && styles.compactPhotoFrame]}>
       {uri ? (
-        <Image accessibilityLabel={label} resizeMode="cover" source={{ uri, headers }} style={styles.photo} />
+        <Image accessibilityLabel={label} resizeMode="cover" source={{ uri }} style={styles.photo} />
       ) : (
         <View style={styles.photoPlaceholder}>
           <Text style={styles.photoPlaceholderMark}>＋</Text>
@@ -860,7 +858,7 @@ function PhotoFrame({ compact = false, headers, label, uri }: { compact?: boolea
   );
 }
 
-function ShareScreen({ friendHeaders, record, onBack, onHistory }: { friendHeaders?: Record<string, string>; record: OotdRecord; onBack: () => void; onHistory: () => void }) {
+function ShareScreen({ record, onBack, onHistory }: { record: OotdRecord; onBack: () => void; onHistory: () => void }) {
   const cardRef = useRef<View>(null);
   const [sharing, setSharing] = useState(false);
   const color = colorById(record.colorId);
@@ -900,7 +898,7 @@ function ShareScreen({ friendHeaders, record, onBack, onHistory }: { friendHeade
         <View style={record.mode === 'friend' ? styles.friendPhotos : styles.soloPhoto}>
           <Image source={{ uri: record.photoUri }} style={styles.sharePhoto} />
           {record.mode === 'friend' && record.partnerPhotoUri && (
-            <Image source={{ uri: record.partnerPhotoUri, headers: friendHeaders }} style={styles.sharePhoto} />
+            <Image source={{ uri: record.partnerPhotoUri }} style={styles.sharePhoto} />
           )}
         </View>
         <View style={styles.shareResultRow}>

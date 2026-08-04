@@ -34,6 +34,25 @@ export async function copyPhoto(sourceUri: string, fileName: string): Promise<st
   return destination;
 }
 
+// 친구 사진은 인증 헤더가 있어야 열리는 서버 URL이다. 화면에 URL을 그대로 넘기면
+// 세션이 끝난 뒤 기록에서 열리지 않으므로, 받는 즉시 기기 파일로 저장하고 그 경로만 쓴다.
+export async function downloadPhoto(
+  source: { uri: string; headers: Record<string, string> },
+  fileName: string,
+): Promise<string> {
+  await ensureStorage();
+  const destination = `${PHOTO_DIRECTORY}${fileName}.jpg`;
+  const existing = await FileSystem.getInfoAsync(destination);
+  if (existing.exists) return destination;
+
+  const result = await FileSystem.downloadAsync(source.uri, destination, { headers: source.headers });
+  if (result.status !== 200) {
+    await FileSystem.deleteAsync(destination, { idempotent: true });
+    throw new Error('photo_download_failed');
+  }
+  return destination;
+}
+
 export async function writeTemporaryJpeg(base64: string): Promise<string> {
   const destination = `${FileSystem.cacheDirectory}ootique-friend-upload.jpg`;
   await FileSystem.writeAsStringAsync(destination, base64, { encoding: FileSystem.EncodingType.Base64 });

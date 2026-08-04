@@ -1,3 +1,7 @@
+// 소스 불변식 검사 — 서버를 호출하지 않는다.
+// 여기서 보는 것은 "위험한 코드가 다시 들어오지 않았는가"(공개 URL, 서비스 키, 세션 오용)뿐이다.
+// 실제로 동작하는지는 이 검사로 알 수 없다. 동작 확인은 scripts/friend-sync-e2e.mjs와 두 기기 수동 확인이다.
+
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
@@ -36,4 +40,10 @@ assert.doesNotMatch(app, /friendPhotoSource\(friendSession/);
 assert.doesNotMatch(app, /approveFriendJoin\(friendSession\)/);
 assert.doesNotMatch(app, /uploadOwnFriendPhoto\(friendSession/);
 
-console.log('friend sync security invariants: ok');
+// 친구 사진은 인증 헤더가 필요한 서버 URL이다. 화면과 기록에는 기기 파일 경로만 들어가야 한다.
+assert.match(app, /downloadPhoto\(\s*source,/);
+assert.match(app, /copyPhoto\(friendUri, `\$\{id\}-friend`\)/);
+assert.doesNotMatch(app, /headers: friendHeaders/);
+assert.doesNotMatch(app, /source=\{\{ uri, headers \}\}/);
+
+console.log('friend sync source invariants: ok (서버 미호출 — 동작 확인은 test:friend-sync:e2e)');

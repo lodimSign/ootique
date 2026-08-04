@@ -27,6 +27,7 @@
     "typecheck": "tsc --noEmit",
     "test:domain": "node scripts/domain-check.mjs",
     "test:friend-sync": "node scripts/friend-sync-check.mjs",
+    "test:friend-sync:e2e": "node scripts/friend-sync-e2e.mjs",
     "check:release": "node scripts/release-check.mjs",
     "check": "npm run typecheck && npm run test:domain && npm run test:friend-sync && npm run check:release && npx expo-doctor"
   },
