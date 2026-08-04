@@ -1,5 +1,7 @@
 export type ChallengeMode = 'solo' | 'friend';
 
+export type Screen = 'today' | 'capture' | 'share' | 'history';
+
 export type OotiqueColor = {
   id: string;
   name: string;

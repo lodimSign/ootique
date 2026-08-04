@@ -8,7 +8,15 @@ import { readFileSync } from 'node:fs';
 const sql = readFileSync(new URL('../supabase/migrations/20260803113000_friend_sync.sql', import.meta.url), 'utf8');
 const edge = readFileSync(new URL('../supabase/functions/friend-sync/index.ts', import.meta.url), 'utf8');
 const client = readFileSync(new URL('../src/friendSync.ts', import.meta.url), 'utf8');
-const app = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
+const app = [
+  '../App.tsx',
+  '../src/components/ui.tsx',
+  '../src/components/RouletteMachine.tsx',
+  '../src/components/TodayScreen.tsx',
+  '../src/components/CaptureScreen.tsx',
+  '../src/components/ShareScreen.tsx',
+  '../src/components/HistoryScreen.tsx',
+].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8')).join('\n');
 
 assert.match(sql, /public = false/);
 assert.match(sql, /array\['image\/jpeg'\]/);
