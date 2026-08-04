@@ -47,7 +47,11 @@ OOTD,오오티디,패션,코디,색상,컬러,옷,스타일,챌린지,친구,룰
 - 개인정보 처리방침: `https://lodimsign.github.io/ootique/#privacy`
 - 지원: `https://lodimsign.github.io/ootique/#support`
 
-GitHub Pages를 실제 공개한 뒤 두 URL이 열리는지 확인해야 합니다.
+2026-08-04 공개 완료. 두 URL 모두 HTTP 200이고 `id="privacy"`, `id="support"` 앵커를 확인했다.
+
+공개 저장소 `lodimSign/ootique`에는 **페이지 파일 2개(`index.html`, `.nojekyll`)만** 있다.
+앱 소스는 로컬 비공개 저장소에 그대로 둔다. 처방침을 고칠 때는 이 저장소의
+`docs/index.html`을 고친 뒤 공개 저장소에 같은 파일을 다시 올린다 — 두 벌이 어긋나지 않게 한다.
 
 ## 개인정보 표시 (App Privacy)
 
