@@ -1,13 +1,21 @@
 {
   "expo": {
-    "name": "ootique",
+    "name": "Ootique",
     "slug": "ootique",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "ootique",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FBF8F1"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.lodim.ootique",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
@@ -20,6 +28,18 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Ootique가 선택한 OOTD 사진을 불러오도록 허용합니다.",
+          "cameraPermission": "Ootique가 오늘의 OOTD를 촬영하도록 카메라 사용을 허용합니다.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-iap",
+      "expo-secure-store"
+    ]
   }
 }

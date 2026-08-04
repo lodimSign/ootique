@@ -1,0 +1,4 @@
+project_id = "ootique"
+
+[functions.friend-sync]
+verify_jwt = false
