@@ -6,9 +6,13 @@ const DEVICE_KEY = 'ootique.vote-device.v1';
 
 export type PublishResult = { entryId: string; shareToken: string; matchShareToken: string | null };
 
+// 투표 페이지는 GitHub Pages에 있다. Supabase Edge Function은 HTML을 돌려줄 수 없다 —
+// 게이트웨이가 text/plain과 `CSP: default-src 'none'; sandbox`를 강제로 붙인다(2026-08-06 실측).
+const votePageUrl = 'https://lodimsign.github.io/ootique/v.html';
+
 // 링크를 받은 사람은 앱이 없어도 이 주소에서 투표하고 앱을 받을 수 있다.
 export function voteLink(token: string): string {
-  return `${functionUrl}?t=${encodeURIComponent(token)}`;
+  return `${votePageUrl}?t=${encodeURIComponent(token)}`;
 }
 
 export function shareMessage(colorName: string, token: string): string {

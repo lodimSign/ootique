@@ -14,6 +14,8 @@ const corsHeaders = {
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const BUCKET = 'public-entries';
 const MIN_BOARD_VOTES = 5;
+// 함수 안에서 본 url.origin은 내부 주소(http://<ref>.supabase.co/vote)라 외부에 그대로 쓸 수 없다.
+const PUBLIC_FUNCTION_URL = `${Deno.env.get('SUPABASE_URL')}/functions/v1/vote`;
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
@@ -110,22 +112,6 @@ async function readJpeg(file: unknown, minSide: number, maxSide: number) {
   const longest = Math.max(size.width, size.height);
   if (longest < minSide || longest > maxSide) return null;
   try { return stripJpegMetadata(original); } catch { return null; }
-}
-
-function escapeHtml(value: string) {
-  return value.replace(/[&<>"']/g, (char) => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!
-  ));
-}
-
-function voterCookie(req: Request) {
-  const raw = req.headers.get('cookie') ?? '';
-  const match = raw.match(/(?:^|;\s*)ov=([A-Za-z0-9_-]{16,64})(?:;|$)/);
-  return match?.[1] ?? null;
-}
-
-function setCookie(id: string) {
-  return { 'Set-Cookie': `ov=${id}; Path=/; Max-Age=31536000; HttpOnly; Secure; SameSite=Lax` };
 }
 
 async function register(req: Request) {
@@ -292,92 +278,20 @@ async function tallies(matchId: string, entryA: string, entryB: string) {
   };
 }
 
-async function votePage(req: Request, url: URL, token: string) {
+// 투표 페이지는 GitHub Pages의 정적 docs/v.html이 그린다.
+// Supabase Edge Function은 HTML을 돌려줄 수 없다 — 게이트웨이가 text/plain과
+// `CSP: default-src 'none'; sandbox`를 강제로 붙여 스크립트도 이미지도 막힌다(2026-08-06 실측).
+// 그래서 여기서는 화면에 필요한 값만 JSON으로 준다.
+async function card(url: URL) {
+  const token = url.searchParams.get('t') ?? '';
   const resolved = await resolveToken(token);
-  if (!resolved) {
-    return new Response(page('지난 카드예요', '<p class="msg">공개가 내려갔거나 7일이 지나 사라진 카드입니다.</p>', ''), {
-      status: 404, headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
-    });
-  }
-  const base = `${url.origin}${url.pathname}`;
-  const imageA = `${base}?action=img&t=${encodeURIComponent(token)}&side=a`;
-  const imageB = `${base}?action=img&t=${encodeURIComponent(token)}&side=b`;
-  const isMatch = resolved.kind === 'match';
-  const title = isMatch ? '누가 오늘의 컬러를 더 잘 살렸나요?' : '오늘의 컬러를 입고 나왔어요';
-
-  const body = isMatch
-    ? `<div class="pair">
-         <button class="side" data-side="a"><img alt="A" src="${imageA}"><span>A</span></button>
-         <button class="side" data-side="b"><img alt="B" src="${imageB}"><span>B</span></button>
-       </div>
-       <p class="msg" id="msg">마음에 드는 쪽을 눌러주세요.</p>`
-    : `<div class="solo"><img alt="OOTD" src="${imageA}"></div>
-       <p class="msg">Ootique에서 오늘의 컬러를 받아보세요.</p>`;
-
-  const script = isMatch
-    ? `<script>
-document.querySelectorAll('.side').forEach(function (el) {
-  el.addEventListener('click', function () {
-    document.querySelectorAll('.side').forEach(function (b) { b.disabled = true; });
-    fetch(${JSON.stringify(base)} + '?action=vote', {
-      method: 'POST', credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ t: ${JSON.stringify(token)}, side: el.dataset.side })
-    }).then(function (r) { return r.json(); }).then(function (d) {
-      var msg = document.getElementById('msg');
-      if (d.error === 'already_voted') { msg.textContent = '이미 투표하셨어요. A ' + d.a + ' · B ' + d.b; return; }
-      if (d.error) { msg.textContent = '투표를 저장하지 못했어요.'; document.querySelectorAll('.side').forEach(function (b) { b.disabled = false; }); return; }
-      msg.textContent = '고마워요! A ' + d.a + ' · B ' + d.b;
-    }).catch(function () {
-      document.getElementById('msg').textContent = '연결에 실패했어요. 다시 시도해 주세요.';
-      document.querySelectorAll('.side').forEach(function (b) { b.disabled = false; });
-    });
-  });
-});
-</script>`
-    : '';
-
-  const html = page(title, body + script, imageA);
-  const cookie = voterCookie(req) ? {} : setCookie(randomToken(16));
-  return new Response(html, {
-    status: 200,
-    headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8', ...cookie },
-  });
-}
-
-function page(title: string, inner: string, ogImage: string) {
-  return `<!doctype html>
-<html lang="ko"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ootique — ${escapeHtml(title)}</title>
-<meta property="og:title" content="Ootique — ${escapeHtml(title)}">
-<meta property="og:description" content="오늘의 랜덤 컬러를 살린 OOTD. 눌러서 투표하고 앱도 받아보세요.">
-${ogImage ? `<meta property="og:image" content="${escapeHtml(ogImage)}">` : ''}
-<meta name="twitter:card" content="summary_large_image">
-<style>
-:root{color-scheme:light dark}
-body{margin:0;padding:24px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#FAF7F1;color:#2A2622;display:flex;flex-direction:column;align-items:center;gap:16px}
-h1{font-size:20px;margin:0;text-align:center}
-.brand{font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:#8A8177}
-.pair{display:flex;gap:10px;width:100%;max-width:520px}
-.side{flex:1;padding:0;border:1px solid #E4DED3;border-radius:20px;overflow:hidden;background:#EFEAE1;position:relative;cursor:pointer}
-.side:disabled{opacity:.6;cursor:default}
-.side img,.solo img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover}
-.side span{position:absolute;left:10px;top:10px;background:rgba(0,0,0,.55);color:#fff;font-weight:700;border-radius:999px;padding:2px 10px}
-.solo{width:100%;max-width:340px;border:1px solid #E4DED3;border-radius:20px;overflow:hidden}
-.msg{margin:0;text-align:center;color:#6B6358;min-height:22px}
-.get{margin-top:8px;padding:14px 28px;border-radius:999px;background:#2A2622;color:#FAF7F1;text-decoration:none;font-weight:700}
-.note{font-size:12px;color:#8A8177;text-align:center;max-width:340px}
-@media (prefers-color-scheme:dark){body{background:#1B1917;color:#F2EDE5}.msg{color:#B6ADA1}.get{background:#F2EDE5;color:#1B1917}}
-</style>
-</head><body>
-<div class="brand">ootique</div>
-<h1>${escapeHtml(title)}</h1>
-${inner}
-<a class="get" href="#">앱 받기 · 곧 출시</a>
-<p class="note">Ootique는 매일 하나의 랜덤 컬러를 주고, 그 컬러를 살린 오늘의 옷을 기록하는 앱입니다.</p>
-</body></html>`;
+  if (!resolved) return json(404, { error: 'not_found' });
+  const base = `${PUBLIC_FUNCTION_URL}?action=img&t=${encodeURIComponent(token)}`;
+  return json(200, {
+    kind: resolved.kind,
+    colorId: resolved.sides[0].colorId,
+    images: resolved.sides.map((_, index) => `${base}&side=${index === 0 ? 'a' : 'b'}`),
+  }, { 'Cache-Control': 'no-store' });
 }
 
 async function castVote(req: Request, body: Record<string, unknown>) {
@@ -390,12 +304,13 @@ async function castVote(req: Request, body: Record<string, unknown>) {
   const chosen = resolved.sides[sideIndex];
   const [a, b] = resolved.sides;
 
-  let cookieId = voterCookie(req);
-  const freshCookie = !cookieId;
-  if (!cookieId) cookieId = randomToken(16);
-  const voterHash = await sha256(`${cookieId}:${voteSecret}`);
+  // 투표자 식별은 페이지가 localStorage에 보관하는 임의 ID다. 쿠키를 쓰면 페이지와 함수의
+  // 도메인이 달라 사파리·크롬의 서드파티 차단에 걸린다. 원문은 저장하지 않고 해시만 쓴다.
+  const voterId = String(body.voter ?? '');
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(voterId)) return json(400, { error: 'invalid_voter' });
+  const voterHash = await sha256(`${voterId}:${voteSecret}`);
   const device = await authenticate(req);
-  const headers = freshCookie ? setCookie(cookieId) : {};
+  const headers = {};
 
   const { data, error } = await supabase.rpc('cast_vote', {
     p_match_id: resolved.matchId,
@@ -454,12 +369,11 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
     const action = url.searchParams.get('action') ?? '';
-    const token = url.searchParams.get('t') ?? '';
 
     if (req.method === 'GET' && action === 'img') return await image(url);
     if (req.method === 'GET' && action === 'link') return await link(url);
     if (req.method === 'GET' && action === 'board') return await board(url);
-    if (req.method === 'GET' && token) return await votePage(req, url, token);
+    if (req.method === 'GET' && action === 'card') return await card(url);
     if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });
 
     if (action === 'register') return await register(req);
