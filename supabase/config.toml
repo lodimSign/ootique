@@ -2,3 +2,7 @@ project_id = "ootique"
 
 [functions.friend-sync]
 verify_jwt = false
+
+# 링크를 받은 사람은 Supabase 계정이 없다. 인증은 함수 안에서 기기 토큰과 쿠키로 한다.
+[functions.vote]
+verify_jwt = false
