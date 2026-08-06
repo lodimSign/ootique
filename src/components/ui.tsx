@@ -1,4 +1,5 @@
-import { Image, Pressable, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Modal, Pressable, Text, View, type ImageStyle, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Screen } from '../domain';
@@ -70,11 +71,35 @@ export function BottomNav({ active, onNavigate }: { active: Screen; onNavigate: 
   );
 }
 
-export function PhotoFrame({ compact = false, label, uri }: { compact?: boolean; label: string; uri: string | null }) {
+export function ZoomablePhoto({ label, style, uri }: { label: string; style: StyleProp<ImageStyle>; uri: string }) {
+  const [zoomed, setZoomed] = useState(false);
   return (
-    <View style={[styles.photoFrame, compact && styles.compactPhotoFrame]}>
+    <Pressable
+      accessibilityLabel={`${label} 크게 보기`}
+      accessibilityRole="imagebutton"
+      onPress={() => setZoomed(true)}
+      style={styles.zoomTouch}
+    >
+      <Image resizeMode="cover" source={{ uri }} style={style} />
+      <Modal animationType="fade" onRequestClose={() => setZoomed(false)} transparent visible={zoomed}>
+        <Pressable
+          accessibilityLabel="원본 사진 닫기"
+          accessibilityRole="button"
+          onPress={() => setZoomed(false)}
+          style={styles.zoomBackdrop}
+        >
+          <Image resizeMode="contain" source={{ uri }} style={styles.zoomImage} />
+        </Pressable>
+      </Modal>
+    </Pressable>
+  );
+}
+
+export function PhotoFrame({ label, style, uri }: { label: string; style?: StyleProp<ViewStyle>; uri: string | null }) {
+  return (
+    <View style={[styles.photoFrame, style]}>
       {uri ? (
-        <Image accessibilityLabel={label} resizeMode="cover" source={{ uri }} style={styles.photo} />
+        <ZoomablePhoto label={label} style={styles.photo} uri={uri} />
       ) : (
         <View style={styles.photoPlaceholder}>
           <Text style={styles.photoPlaceholderMark}>＋</Text>

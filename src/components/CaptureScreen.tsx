@@ -23,17 +23,21 @@ export function CaptureScreen(props: CaptureScreenProps) {
     <ScrollView contentContainerStyle={styles.captureContent}>
       <ScreenHeader title="오늘의 OOTD" onBack={props.onBack} />
       <Text style={styles.captureGuide}>{props.colorName}을 살린 옷을 보여주세요.</Text>
-      <PhotoFrame label="내 OOTD" uri={props.mineUri} />
+      {props.mode === 'friend' ? (
+        <View style={styles.capturePhotoRow}>
+          <PhotoFrame label="내 OOTD" style={styles.photoColumn} uri={props.mineUri} />
+          <PhotoFrame label="친구 OOTD" style={styles.photoColumn} uri={props.friendUri} />
+        </View>
+      ) : (
+        <PhotoFrame label="내 OOTD" uri={props.mineUri} />
+      )}
       <View style={styles.actionRow}>
         <SmallButton label="카메라" onPress={() => props.onChoose('mine', 'camera')} />
         <SmallButton label="앨범에서 선택" onPress={() => props.onChoose('mine', 'library')} />
       </View>
 
-      {props.mode === 'friend' && (
-        <>
-          <PhotoFrame compact label="친구 OOTD" uri={props.friendUri} />
-          {!props.friendUri && <Text style={styles.captureGuide}>친구가 사진을 올리면 자동으로 표시돼요.</Text>}
-        </>
+      {props.mode === 'friend' && !props.friendUri && (
+        <Text style={styles.captureGuide}>친구가 사진을 올리면 자동으로 표시돼요.</Text>
       )}
 
       <Pressable

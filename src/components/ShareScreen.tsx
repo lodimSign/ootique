@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, PixelRatio, Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, PixelRatio, Pressable, ScrollView, Text, View } from 'react-native';
+import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
 
 import { colorById, type OotdRecord } from '../domain';
 import { THEME, styles } from '../theme';
-import { ScreenHeader } from './ui';
+import { ScreenHeader, ZoomablePhoto } from './ui';
 
 export function ShareScreen({ record, onBack, onHistory }: { record: OotdRecord; onBack: () => void; onHistory: () => void }) {
   const cardRef = useRef<View>(null);
@@ -15,6 +16,11 @@ export function ShareScreen({ record, onBack, onHistory }: { record: OotdRecord;
     if (!cardRef.current) return;
     setSharing(true);
     try {
+      // ponytail: RN Share의 url은 iOS 전용이라 안드로이드에서 이미지가 빠졌다. expo-sharing은 양쪽 다 파일을 보낸다.
+      if (!(await Sharing.isAvailableAsync())) {
+        Alert.alert('이 기기에서는 공유를 열 수 없어요', '사진 앱으로 저장한 뒤 보내주세요.');
+        return;
+      }
       const pixelRatio = PixelRatio.get();
       const uri = await captureRef(cardRef, {
         format: 'png',
@@ -23,10 +29,10 @@ export function ShareScreen({ record, onBack, onHistory }: { record: OotdRecord;
         width: Math.round(1080 / pixelRatio),
         height: Math.round(1350 / pixelRatio),
       });
-      await Share.share({
-        title: 'Ootique 오늘의 컬러',
-        message: `오늘의 컬러는 ${color.name}. Ootique에서 함께 도전해요.`,
-        url: uri,
+      await Sharing.shareAsync(uri, {
+        mimeType: 'image/png',
+        UTI: 'public.png',
+        dialogTitle: `오늘의 컬러는 ${color.name}`,
       });
     } catch {
       Alert.alert('공유 카드를 만들지 못했어요', '잠시 후 다시 시도해 주세요.');
@@ -44,9 +50,9 @@ export function ShareScreen({ record, onBack, onHistory }: { record: OotdRecord;
           <Text style={styles.shareDate}>{record.dateKey}</Text>
         </View>
         <View style={record.mode === 'friend' ? styles.friendPhotos : styles.soloPhoto}>
-          <Image source={{ uri: record.photoUri }} style={styles.sharePhoto} />
+          <ZoomablePhoto label="내 OOTD" style={styles.sharePhoto} uri={record.photoUri} />
           {record.mode === 'friend' && record.partnerPhotoUri && (
-            <Image source={{ uri: record.partnerPhotoUri }} style={styles.sharePhoto} />
+            <ZoomablePhoto label="친구 OOTD" style={styles.sharePhoto} uri={record.partnerPhotoUri} />
           )}
         </View>
         <View style={styles.shareResultRow}>
