@@ -114,11 +114,62 @@
 - 자동 검사 항목: 공개 동의한 사진만 목록에 나오는가, 본인 투표가 막히는가, 같은 기기의 두 번째 투표가 막히는가, 앱이 보낸 숫자로 득표수를 바꿀 수 없는가, 비공개로 되돌리거나 삭제한 사진이 순위에서 빠지는가, 신고·차단이 화면과 데이터에 반영되는가.
 - 수동 확인: 실기기 2대와 앱을 안 깐 PC 브라우저 1대로 링크 투표까지 확인한다.
 
-### lodim이 직접 해야 하는 것
+### lodim이 직접 해야 하는 것 (2026-08-06 승인)
 
-1. 개인정보 처리방침에 공개 사진 항목을 넣어 다시 게시한다.
-2. 무관용 EULA를 App Store Connect에 등록한다.
-3. 신고를 24시간 안에 처리하겠다는 운영 약속을 지킨다. 심사에서 실제로 확인한다.
+세 가지를 8/6에 승인했다. 그중 lodim만 할 수 있는 부분만 남기고 나머지는 cl이 한다.
+
+1. **개인정보 처리방침 개정** — 공개 사진·투표·기기 식별 항목을 넣는 문서 수정은 cl이 `docs/index.html`과 `docs/app-store-metadata.md`에 한다. lodim은 GitHub `lodimSign/ootique` 저장소를 공개로 만드는 것만 승인하면 된다. 승인 뒤 저장소 생성·Pages 설정·URL 확인까지 cl이 한다.
+2. **무관용 EULA 등록** — 문구는 cl이 쓴다. lodim은 크롬에서 App Store Connect에 한 번 로그인만 하고, 그 뒤 입력은 cl이 대신 한다.
+3. **신고 24시간 처리 약속** — 이건 lodim만 할 수 있다. 심사에서 실제로 확인하며 어기면 앱이 내려간다. C단계에서 만들 관리 화면으로 처리한다.
+
+## A단계 실행 스펙 (2026-08-06 확정)
+
+### 공개 동의
+
+- 사진 저장 화면에 `오늘의 투표에 공개` 스위치를 둔다. 기본은 꺼짐이고, 꺼두면 지금 동작과 완전히 같다.
+- **친구 모드는 두 사람이 모두 켰을 때만 A/B 투표 링크가 생긴다.** 한쪽만 켜면 그 사람 사진 한 장만 순위에 오르고 A/B 링크 버튼은 잠긴다. 동의하지 않은 사진이 링크로 나가는 경로를 만들지 않는다.
+- 공개를 끄거나 사진을 지우면 엔트리가 즉시 `hidden`이 되어 투표 페이지·순위·썸네일 모두 404가 된다.
+
+### 공유에는 앱 링크를 무조건 넣는다
+
+모든 공유 경로에 앱으로 들어오는 링크를 함께 보낸다. 이 규칙은 앞으로 추가하는 공유 기능에도 그대로 적용한다 (`docs/app-development-manual.md` 규칙 6).
+
+- 기본 버튼 `친구에게 보내기` — `Share.share({ message })`로 한 줄 문구와 링크를 보낸다. iOS·안드로이드가 같고 링크가 눌린다. 메신저는 링크 페이지의 OG 태그를 읽어 카드 이미지를 미리 보여준다.
+- 보조 버튼 `카드 이미지 공유` — 지금의 `Sharing.shareAsync` 경로를 그대로 둔다. 이미지 파일만 필요할 때 쓴다.
+- 링크 주소는 `https://lkgipsszgvpcabdefvhc.supabase.co/functions/v1/vote?t=<share_token>`이다. 짧은 도메인은 사지 않는다 — 수익 재투자 게이트 전이다.
+- 링크 페이지 아래에 `앱 받기` 버튼을 둔다. 출시 전에는 `곧 출시` 안내로 두고 App Store URL은 출시 때 채운다.
+- QR 코드는 넣지 않는다. 새 의존성(`react-native-svg`)이 필요한데 링크 버튼으로 충분하다.
+
+### 새 데이터 (`supabase/migrations/20260806*_public_vote.sql`)
+
+- `devices` — `id`, `token_hash` unique, `created_at`. 기기 토큰 원문은 SecureStore에만 두고 서버는 해시만 갖는다.
+- `entries` — `id`, `device_id`, `challenge_date`, `color_id`, `object_key`, `thumb_key`, `share_token` unique, `status`(`public`·`hidden`·`deleted`), `wins`, `losses`, `votes_total`, `expires_at`.
+- `matches` — `id`, `entry_a`, `entry_b`, `share_token` unique, `challenge_date`.
+- `votes` — `primary key (match_id, voter_hash)`, `entry_id`, `created_at`.
+- 새 비공개 버킷 `public-entries`. 공개 URL은 만들지 않고 Edge Function이 내보낸다. 기존 `friend-photos`는 건드리지 않는다.
+- 기존과 같이 RLS를 켜고 `anon`·`authenticated` 권한을 회수한 뒤 `service_role`만 접근한다.
+
+### 엔드포인트 (`supabase/functions/vote/index.ts`)
+
+- `POST ?action=register` — 기기 토큰 발급.
+- `POST ?action=publish` — 1080px 원본과 600px 썸네일을 같이 받아 엔트리를 만들고 `share_token`을 돌려준다. 친구 모드는 `pairId`·`slot`을 함께 보내고, 두 슬롯이 모두 공개일 때만 `matches` 행과 A/B `share_token`을 만든다.
+- `POST ?action=unpublish` — `status`를 `hidden`으로 바꾸고 파일을 지운다.
+- `GET ?t=<token>` — 투표 페이지 HTML. OG 태그(`og:image`는 아래 썸네일 주소)를 포함한다.
+- `GET ?action=img&t=<token>&side=a|b` — 600px 썸네일. `status`가 `public`일 때만 200.
+- `POST ?action=vote` — 투표. 아래 규칙을 서버가 강제한다.
+- `GET ?action=board` — 순위. 승률 기준이며 최소 5표를 넘긴 엔트리만 올린다.
+
+### 투표자 식별과 조작 방지
+
+- 투표자는 첫 방문에 `HttpOnly` 쿠키로 임의 ID를 받는다. `voter_hash = sha256(쿠키ID + 서버 비밀)`이고 쿠키 원문은 저장하지 않는다.
+- 중복은 `votes`의 기본키가 막고, 같은 IP의 연속 요청은 기존 `consume_friend_rate_limit` 방식으로 제한한다.
+- 자기 기기가 올린 엔트리에는 투표할 수 없다.
+- 득표수는 앱·웹이 보낸 숫자를 쓰지 않고 서버가 `votes`를 세어 계산한다.
+- 쿠키는 지울 수 있으므로 완전한 차단은 불가능하다. 그래서 순위를 총 득표가 아니라 승률로 내고 최소 표 수를 둔다.
+
+### 보관
+
+엔트리는 만든 지 7일 뒤 원본·썸네일·행을 함께 지운다. 무료 보관 규칙과 같은 기간이다.
 
 ## 현재 구현 검사 결과
 
