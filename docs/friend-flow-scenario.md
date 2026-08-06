@@ -136,8 +136,12 @@
 
 - 기본 버튼 `친구에게 보내기` — `Share.share({ message })`로 한 줄 문구와 링크를 보낸다. iOS·안드로이드가 같고 링크가 눌린다. 메신저는 링크 페이지의 OG 태그를 읽어 카드 이미지를 미리 보여준다.
 - 보조 버튼 `카드 이미지 공유` — 지금의 `Sharing.shareAsync` 경로를 그대로 둔다. 이미지 파일만 필요할 때 쓴다.
-- 링크 주소는 `https://lkgipsszgvpcabdefvhc.supabase.co/functions/v1/vote?t=<share_token>`이다. 짧은 도메인은 사지 않는다 — 수익 재투자 게이트 전이다.
+- 링크 주소는 `https://lodimsign.github.io/ootique/v.html?t=<share_token>`이다. 짧은 도메인은 사지 않는다 — 수익 재투자 게이트 전이다.
+- **투표 페이지를 Edge Function이 그리지 못한다.** Supabase 게이트웨이가 함수의 HTML 응답을 `Content-Type: text/plain`으로 바꾸고 `Content-Security-Policy: default-src 'none'; sandbox`를 붙인다. 피싱 방지 정책이라 우회할 수 없다(2026-08-06 실측). 그래서 함수는 `action=card`로 JSON만 주고 화면은 GitHub Pages의 정적 `docs/v.html`이 그린다.
+- 투표자 식별은 쿠키가 아니라 페이지의 `localStorage` 값이다. 페이지와 함수의 도메인이 달라 쿠키는 사파리·크롬의 서드파티 차단에 걸린다.
+- 함수 안에서 본 `url.origin`은 내부 주소(`http://<ref>.supabase.co/vote`)라 외부 주소로 쓸 수 없다. 이미지 주소는 `SUPABASE_URL` 환경변수로 만든다.
 - 링크 페이지 아래에 `앱 받기` 버튼을 둔다. 출시 전에는 `곧 출시` 안내로 두고 App Store URL은 출시 때 채운다.
+- 메신저 미리보기 이미지는 카드마다 다르게 못 넣는다. 정적 페이지라 `og:image`가 고정된 `docs/og.png` 하나다. 카드별 미리보기가 필요해지면 HTML을 그릴 수 있는 곳으로 페이지를 옮겨야 한다.
 - QR 코드는 넣지 않는다. 새 의존성(`react-native-svg`)이 필요한데 링크 버튼으로 충분하다.
 
 ### 새 데이터 (`supabase/migrations/20260806*_public_vote.sql`)
