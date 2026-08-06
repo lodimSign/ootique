@@ -10,6 +10,10 @@ export type PublishResult = { entryId: string; shareToken: string; matchShareTok
 // 게이트웨이가 text/plain과 `CSP: default-src 'none'; sandbox`를 강제로 붙인다(2026-08-06 실측).
 const votePageUrl = 'https://lodimsign.github.io/ootique/v.html';
 
+// 비공개 기록에는 투표 링크가 없다. 그때도 앱으로 들어오는 길은 같이 보낸다.
+// 출시 뒤에는 이 값을 App Store 주소로 바꾼다.
+export const appLink = 'https://lodimsign.github.io/ootique/';
+
 // 링크를 받은 사람은 앱이 없어도 이 주소에서 투표하고 앱을 받을 수 있다.
 export function voteLink(token: string): string {
   return `${votePageUrl}?t=${encodeURIComponent(token)}`;

@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, PixelRatio, Pressable, ScrollView, Share, Text, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
 
 import { colorById, type OotdRecord } from '../domain';
 import { THEME, styles } from '../theme';
-import { currentShareToken, shareMessage } from '../voteSync';
+import { appLink, currentShareToken, shareMessage, voteLink } from '../voteSync';
 import { ScreenHeader, ZoomablePhoto } from './ui';
 
 export function ShareScreen({ record, onBack, onHistory, onUnpublish }: {
@@ -64,11 +65,21 @@ export function ShareScreen({ record, onBack, onHistory, onUnpublish }: {
         width: Math.round(1080 / pixelRatio),
         height: Math.round(1350 / pixelRatio),
       });
+      // 매뉴얼 규칙 6 — 이미지만 나가는 공유는 만들지 않는다. Sharing.shareAsync는 글자를 못 실으므로
+      // 링크를 클립보드에 올려 같은 대화에 바로 붙여넣게 한다.
+      const link = record.shareToken ? voteLink(await currentShareToken(record.shareToken)) : appLink;
+      const copied = await Clipboard.setStringAsync(link).then(() => true).catch(() => false);
       await Sharing.shareAsync(uri, {
         mimeType: 'image/png',
         UTI: 'public.png',
         dialogTitle: `오늘의 컬러는 ${color.name}`,
       });
+      Alert.alert(
+        copied ? '링크도 복사했어요' : '링크를 복사하지 못했어요',
+        copied
+          ? '방금 보낸 대화에 그대로 붙여넣으면 친구가 눌러서 바로 열 수 있어요.'
+          : `이 주소를 직접 보내주세요.\n\n${link}`,
+      );
     } catch {
       Alert.alert('공유 카드를 만들지 못했어요', '잠시 후 다시 시도해 주세요.');
     } finally {
@@ -135,8 +146,8 @@ export function ShareScreen({ record, onBack, onHistory, onUnpublish }: {
 
       <Text style={styles.localOnly}>
         {record.shareToken
-          ? '보내는 링크를 누르면 앱이 없어도 바로 투표하고 앱을 받을 수 있어요.'
-          : '이 기록은 비공개예요. 카드 이미지만 보내집니다.'}
+          ? '어느 쪽으로 보내도 링크가 함께 갑니다. 누르면 앱이 없어도 바로 투표하고 앱을 받을 수 있어요.'
+          : '이 기록은 비공개예요. 카드 이미지와 함께 앱 주소만 복사됩니다.'}
       </Text>
     </ScrollView>
   );
