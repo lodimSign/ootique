@@ -29,9 +29,11 @@ import {
   pruneExpiredRecords,
   removeAllData,
   removeRecord,
+  toThumbJpeg,
   toUploadJpeg,
   upsertRecord,
 } from './src/storage';
+import { publishEntry, unpublishEntry } from './src/voteSync';
 import { PLUS_PRODUCT_ID, hasPlusPurchase, purchaseErrorMessage } from './src/purchases';
 import {
   approveFriendJoin,
@@ -83,6 +85,8 @@ function OotiqueApp() {
   const [purchaseChecked, setPurchaseChecked] = useState(false);
   const [recordsLoaded, setRecordsLoaded] = useState(false);
   const [retentionDate, setRetentionDate] = useState(() => localDateKey());
+  // 공개는 사용자가 직접 켜는 opt-in이고 저장할 때마다 다시 꺼진다.
+  const [publicOptIn, setPublicOptIn] = useState(false);
   const storeLoaded = useRef(false);
   const retentionDisabled = useRef(false);
   const lastPrunedCutoff = useRef<string | null>(null);
@@ -462,6 +466,23 @@ function OotiqueApp() {
         mode === 'friend' && friendUri
           ? await copyPhoto(friendUri, `${id}-friend`)
           : undefined;
+      // 공개를 켠 사진만 서버로 올라간다. 실패해도 기기 기록은 남긴다 — 저장을 통째로 잃는 것이 더 나쁘다.
+      let published: { entryId: string; shareToken: string; matchShareToken: string | null } | null = null;
+      if (publicOptIn) {
+        try {
+          published = await publishEntry({
+            photoUri: mineUploadUri ?? (await toUploadJpeg(mineUri)),
+            thumbUri: await toThumbJpeg(mineUri),
+            colorId: color.id,
+            pairId: mode === 'friend' ? matchingFriendSession?.pairId : undefined,
+            slot: mode === 'friend' ? matchingFriendSession?.slot : undefined,
+          });
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : String(error);
+          Alert.alert('공개하지 못했어요', `${reason}\n\n사진은 기기에 저장했어요. 공유 카드에서 다시 시도할 수 있어요.`);
+        }
+      }
+
       const record: OotdRecord = {
         id,
         dateKey: today,
@@ -471,9 +492,12 @@ function OotiqueApp() {
         photoUri: savedMineUri,
         partnerPhotoUri: savedFriendUri,
         createdAt: new Date().toISOString(),
+        publicEntryId: published?.entryId,
+        shareToken: published ? published.matchShareToken ?? published.shareToken : undefined,
       };
       setRecords(await upsertRecord(record));
       setActiveRecord(record);
+      setPublicOptIn(false);
       setScreen('share');
     } catch (error) {
       // 원인을 삼키면 실기기에서 서버 거절(invalid_photo 등)과 기기 저장 실패를 구분할 수 없다.
@@ -482,6 +506,14 @@ function OotiqueApp() {
     } finally {
       setOperationBusy(false);
     }
+  };
+
+  const unpublishActive = async () => {
+    if (!activeRecord?.publicEntryId) return;
+    await unpublishEntry(activeRecord.publicEntryId);
+    const next: OotdRecord = { ...activeRecord, publicEntryId: undefined, shareToken: undefined };
+    setRecords(await upsertRecord(next));
+    setActiveRecord(next);
   };
 
   const confirmDelete = (record: OotdRecord) => {
@@ -493,6 +525,8 @@ function OotiqueApp() {
         onPress: async () => {
           setOperationBusy(true);
           try {
+            // 기기에서 지웠는데 서버에 공개본이 남아 있으면 안 된다. 실패해도 로컬 삭제는 진행한다.
+            if (record.publicEntryId) await unpublishEntry(record.publicEntryId).catch(() => {});
             setRecords(await removeRecord(record));
           } catch {
             Alert.alert('삭제하지 못했어요', '잠시 후 다시 시도해 주세요.');
@@ -513,6 +547,9 @@ function OotiqueApp() {
         onPress: async () => {
           setOperationBusy(true);
           try {
+            await Promise.all(records
+              .filter((item) => item.publicEntryId)
+              .map((item) => unpublishEntry(item.publicEntryId!).catch(() => {})));
             await removeAllData();
             setRecords([]);
             setActiveRecord(null);
@@ -588,8 +625,10 @@ function OotiqueApp() {
           friendUri={friendUri}
           friendStatus={currentFriendStatus}
           busy={busy}
+          publicOptIn={publicOptIn}
           onBack={() => setScreen('today')}
           onChoose={choosePhoto}
+          onTogglePublic={setPublicOptIn}
           onSave={saveOotd}
         />
       )}
@@ -598,6 +637,7 @@ function OotiqueApp() {
           record={activeRecord}
           onBack={() => setScreen('today')}
           onHistory={() => setScreen('history')}
+          onUnpublish={unpublishActive}
         />
       )}
       {screen === 'history' && (

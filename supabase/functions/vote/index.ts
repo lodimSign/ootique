@@ -251,6 +251,24 @@ async function resolveToken(token: string) {
   };
 }
 
+// 먼저 공개한 사람은 대결 링크가 아직 없다. 상대가 공개한 뒤 다시 물으면 대결 링크를 돌려준다.
+async function link(url: URL) {
+  const token = url.searchParams.get('t') ?? '';
+  const { data: entry } = await supabase
+    .from('vote_entries')
+    .select('id,pair_id,status')
+    .eq('share_token', token)
+    .maybeSingle();
+  if (!entry || entry.status !== 'public') return json(404, { error: 'not_found' });
+  if (!entry.pair_id) return json(200, { shareToken: token, kind: 'entry' });
+
+  const { data } = await supabase.rpc('ensure_vote_match', {
+    p_pair_id: entry.pair_id, p_share_token: randomToken(),
+  });
+  const matchToken = data?.[0]?.match_share_token;
+  return json(200, matchToken ? { shareToken: matchToken, kind: 'match' } : { shareToken: token, kind: 'entry' });
+}
+
 async function image(url: URL) {
   const token = url.searchParams.get('t') ?? '';
   const side = url.searchParams.get('side') === 'b' ? 1 : 0;
@@ -439,6 +457,7 @@ Deno.serve(async (req) => {
     const token = url.searchParams.get('t') ?? '';
 
     if (req.method === 'GET' && action === 'img') return await image(url);
+    if (req.method === 'GET' && action === 'link') return await link(url);
     if (req.method === 'GET' && action === 'board') return await board(url);
     if (req.method === 'GET' && token) return await votePage(req, url, token);
     if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' });

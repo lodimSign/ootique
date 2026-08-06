@@ -6,6 +6,7 @@ import { uploadResizeTarget, type OotdRecord } from './domain';
 const ROOT_DIRECTORY = `${FileSystem.documentDirectory}ootique/`;
 const PHOTO_DIRECTORY = `${ROOT_DIRECTORY}photos/`;
 const RECORDS_FILE = `${ROOT_DIRECTORY}records.json`;
+const THUMB_MAX_SIDE = 600;
 
 async function ensureStorage(): Promise<void> {
   await FileSystem.makeDirectoryAsync(PHOTO_DIRECTORY, { intermediates: true });
@@ -63,6 +64,17 @@ export async function toUploadJpeg(uri: string): Promise<string> {
     ? await ImageManipulator.manipulate(source).resize(target).renderAsync()
     : source;
   const saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.7 });
+  return saved.uri;
+}
+
+// 공개 투표 페이지와 순위 탭은 썸네일만 내보낸다. 원본을 그대로 쓰면 무료 대역폭을 금방 먹는다.
+export async function toThumbJpeg(uri: string): Promise<string> {
+  const source = await ImageManipulator.manipulate(uri).renderAsync();
+  const target = source.width >= source.height ? { width: THUMB_MAX_SIDE } : { height: THUMB_MAX_SIDE };
+  const rendered = Math.max(source.width, source.height) > THUMB_MAX_SIDE
+    ? await ImageManipulator.manipulate(source).resize(target).renderAsync()
+    : source;
+  const saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.6 });
   return saved.uri;
 }
 

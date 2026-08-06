@@ -143,7 +143,7 @@
 ### 새 데이터 (`supabase/migrations/20260806*_public_vote.sql`)
 
 - `devices` — `id`, `token_hash` unique, `created_at`. 기기 토큰 원문은 SecureStore에만 두고 서버는 해시만 갖는다.
-- `entries` — `id`, `device_id`, `challenge_date`, `color_id`, `object_key`, `thumb_key`, `share_token` unique, `status`(`public`·`hidden`·`deleted`), `wins`, `losses`, `votes_total`, `expires_at`.
+- `entries` — `id`, `device_id`, `challenge_date`, `color_id`, `object_key`, `thumb_key`, `share_token` unique, `status`(`public`·`hidden`·`deleted`), `pair_id`, `owner_slot`, `expires_at`. **승패와 득표수는 저장하지 않는다** — `vote_standings` 뷰가 `votes`를 세어 만든다. 저장하지 않으면 앱이 보낸 숫자가 끼어들 자리도, 실제 표와 어긋날 자리도 없다.
 - `matches` — `id`, `entry_a`, `entry_b`, `share_token` unique, `challenge_date`.
 - `votes` — `primary key (match_id, voter_hash)`, `entry_id`, `created_at`.
 - 새 비공개 버킷 `public-entries`. 공개 URL은 만들지 않고 Edge Function이 내보낸다. 기존 `friend-photos`는 건드리지 않는다.

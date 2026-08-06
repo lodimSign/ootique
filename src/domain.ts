@@ -18,6 +18,9 @@ export type OotdRecord = {
   photoUri: string;
   partnerPhotoUri?: string;
   createdAt: string;
+  // 공개 투표에 참가한 기록만 아래 둘을 갖는다. 기본값은 비공개라 대개 없다.
+  publicEntryId?: string;
+  shareToken?: string;
 };
 
 export const OOTIQUE_COLORS: readonly OotiqueColor[] = [

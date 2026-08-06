@@ -31,9 +31,10 @@
 ## 다음 작업
 
 1. ~~Note20에서 `이미지로 공유하기` 이미지 첨부 확인~~ — 2026-08-06 실기기 확인 완료. `expo-sharing` 교체가 맞았다.
-2. A단계 서버 절반을 검토하고 마이그레이션 적용·`vote` 함수 배포·`npm run test:vote`까지 확인한다. 명세는 `docs/friend-flow-scenario.md`의 `A단계 실행 스펙` 절.
-2-1. 서버가 확인되면 앱 절반을 붙인다 — `오늘의 투표에 공개` 스위치, `친구에게 보내기` 링크 버튼(기본), `카드 이미지 공유`(보조), 순위 탭은 B단계.
-2-2. 공개 사진이 실제로 서버에 올라가기 시작하는 시점에 `docs/index.html` 처리방침과 `docs/app-store-metadata.md` 개인정보 표시를 같이 고친다. **기능보다 먼저 고치면 사실과 다르고, 늦게 고치면 허위 표시다.**
+2. **막힌 것 — Supabase 배포 권한.** 코드는 다 됐지만 마이그레이션과 `vote` 함수를 올릴 수 없다. `npx supabase login`을 한 번 해야 한다(도구 권한이 cl의 실행을 막았고, 로그인 자체도 사람이 클릭해야 한다). 로그인 뒤에는 `supabase link` → `db push` → `functions deploy vote` → `npm run test:vote`까지 cl이 한다.
+3. 서버가 올라가면 `npm run test:vote`의 13개 시나리오를 통과시킨다. 특히 `한쪽만 공개하면 대결 링크가 없다`와 `중복 투표가 막힌다`가 핵심이다.
+4. 공개 사진이 실제로 서버에 올라가기 시작하는 시점에 `docs/index.html` 처리방침과 `docs/app-store-metadata.md` 개인정보 표시를 같이 고친다. **기능보다 먼저 고치면 사실과 다르고, 늦게 고치면 허위 표시다.**
+5. B단계 순위 탭, C단계 UGC 4종(신고·차단·처리 절차·무관용 EULA).
 3. 두 기기에서 코드 생성 → 참가 승인 → 각자 업로드 → 상대 사진 자동 표시를 수동 확인한다. **B 업로드와 PNG 스크린샷·고해상도 원본까지 본다** — 이번 수정의 핵심이다. 절차는 `docs/app-development-manual.md` 2.2절.
 4. App Store Connect에 `com.lodim.ootique.plus` 비소모성 상품을 만들고 4,900원 가격대로 설정한다.
 5. 구매 성공·취소·실패·보류·복원·앱 재실행과 8일째 삭제를 개발 빌드에서 확인한다.
@@ -62,7 +63,8 @@
 - App Store Connect 로그인과 이용약관 동의, Apple Developer의 설명 `Ootique`·명시적 번들 ID `com.lodim.ootique` 등록을 완료했다. 식별자 목록에서 등록 결과를 확인했다.
 - App Store 신규 앱 창에는 iOS, 이름 `Ootique: Spin Your Style`, 기본 언어 한국어, 번들 ID `com.lodim.ootique`, SKU `ootique-ios-001`, 전체 액세스까지 입력하고 최종 `생성` 승인 대기 중이다.
 - Expo 계정 `lodimsign` 로그인은 확인했지만 Ootique EAS 프로젝트는 아직 연결되지 않았다. 개인 계정과 `lodimsigns-team` 중 소유 계정을 정한 뒤 `eas init`이 필요하다.
-- GitHub의 `lodimSign/ootique` 저장소는 아직 존재하지 않아 개인정보·지원 URL도 공개되지 않았다. 외부 공개 승인 전에는 생성하지 않는다.
+- **2026-08-06**: lodim 승인으로 `lodimSign/ootique`를 앱 소스까지 공개했다. 8/4에 개인정보 페이지만 올려둔 저장소가 이미 있어서 그것과 합쳤다. Pages 소스를 `/docs`로 옮기고 루트 `index.html` 사본을 지웠다. `https://lodimsign.github.io/ootique/`, `#privacy`, `#support` 모두 200과 최신 내용을 확인했다. 공개 전에 전체 git 이력을 키 패턴으로 검사했고 값은 없었다(환경변수 이름만 있다).
+- Pages 소스를 `/docs`로 옮기면 `docs/.nojekyll`이 있어야 한다. 없으면 Jekyll이 루트 `README.md`를 대신 렌더링해 개인정보 페이지가 사라진다 — 8/6에 실제로 그렇게 나왔다.
 - 2026-08-03 재검사에서 타입 검사, 도메인·구매 판정 검사, 출시 설정 검사, Expo Doctor 18/18을 통과했다.
 - EU 배포 여부와 DSA 거래자 자격 선언이 필요하다. Ootique는 인앱결제 앱이라 거래자일 가능성이 높고, 개인 거래자로 EU에 배포하면 주소·전화·이메일 공개와 검증이 필요하므로 첫 출시 EU 제외를 권장한다.
 - 출시 전 사용자 직접 확인을 위해 Expo SDK 54 LAN 개발 서버를 `172.30.1.30:8081`에서 실행했고 iOS manifest 200 응답을 확인했다. Expo Go에서는 카메라·사진·기록·공유를 확인하고, 실제 StoreKit 결제는 이후 iPhone 내부 빌드에서 확인한다.
