@@ -179,7 +179,58 @@ const boardResult = await call('순위 조회', 'board', { method: 'GET' });
 const listed = (boardResult.body?.entries ?? []).map((row) => row.entryId);
 check('표가 모자란 엔트리는 순위에 없다', !listed.includes(friendA.body?.entryId), JSON.stringify(listed));
 
-// 13. 정리 — 검사 데이터를 서버에 남기지 않는다
+// 13. 신고 — 저장, 같은 브라우저 중복 1회, 3회째 자동 숨김
+// 새 report 액션이 아직 배포 전이면(unknown_action) 이 절만 건너뛴다. 배포 뒤에는 그대로 검사한다.
+const deviceC = (await call('C register', 'register')).body;
+const reportedEntry = (await call('C publish (신고 대상)', 'publish', {
+  token: deviceC?.deviceToken, form: publishForm(),
+})).body;
+const reportToken = reportedEntry?.shareToken;
+const reporter1 = makeVoter();
+
+const report1 = await call('신고 1회', 'report', {
+  json: { t: reportToken, side: 'a', reason: 'inappropriate', reporter: reporter1 },
+});
+if (report1.body?.error === 'unknown_action') {
+  console.log('skip --  report 액션이 아직 배포되지 않아 신고 검사를 건너뛴다');
+  await call('C 엔트리 정리', 'unpublish', { token: deviceC?.deviceToken, json: { entryId: reportedEntry?.entryId } });
+} else {
+  check('신고가 저장된다', report1.status === 200 && report1.body?.reportCount === 1 && report1.body?.hidden === false, JSON.stringify(report1.body));
+
+  const reportDup = await call('같은 브라우저 재신고', 'report', {
+    json: { t: reportToken, side: 'a', reason: 'spam', reporter: reporter1 },
+  });
+  check('같은 브라우저 중복 신고는 1회로 센다', reportDup.status === 200 && reportDup.body?.reportCount === 1 && reportDup.body?.hidden === false, JSON.stringify(reportDup.body));
+
+  const badReason = await call('없는 사유로 신고', 'report', {
+    json: { t: reportToken, side: 'a', reason: 'whatever', reporter: makeVoter() },
+  });
+  check('없는 사유가 400이다', badReason.status === 400, `status ${badReason.status}`);
+
+  const report2 = await call('신고 2회 (다른 브라우저)', 'report', {
+    json: { t: reportToken, side: 'a', reason: 'spam', reporter: makeVoter() },
+  });
+  check('2회까지는 공개가 유지된다', report2.body?.reportCount === 2 && report2.body?.hidden === false, JSON.stringify(report2.body));
+  const cardBefore = await call('2회 신고 뒤 카드', `?action=card&t=${reportToken}`, { method: 'GET' });
+  check('2회 신고 뒤에도 카드가 열린다', cardBefore.status === 200, `status ${cardBefore.status}`);
+
+  const report3 = await call('신고 3회 (다른 브라우저)', 'report', {
+    json: { t: reportToken, side: 'a', reason: 'other', reporter: makeVoter() },
+  });
+  check('3회째 자동 숨김이 된다', report3.body?.reportCount === 3 && report3.body?.hidden === true, JSON.stringify(report3.body));
+
+  const hiddenCard = await call('숨김 뒤 카드', `?action=card&t=${reportToken}`, { method: 'GET' });
+  check('숨긴 카드가 404다', hiddenCard.status === 404, `status ${hiddenCard.status}`);
+  const hiddenImage = await call('숨김 뒤 썸네일', `?action=img&t=${reportToken}&side=a`, { method: 'GET', raw: true });
+  check('숨긴 썸네일이 404다', hiddenImage.status === 404, `status ${hiddenImage.status}`);
+  const hiddenReport = await call('숨김 뒤 추가 신고', 'report', {
+    json: { t: reportToken, side: 'a', reason: 'spam', reporter: makeVoter() },
+  });
+  check('숨긴 카드에는 더 신고할 수 없다', hiddenReport.status === 404, `status ${hiddenReport.status}`);
+  // 숨긴 엔트리와 파일은 검토용으로 서버에 남긴다(삭제 금지). 7일 purge가 정리한다.
+}
+
+// 14. 정리 — 검사 데이터를 서버에 남기지 않는다
 await call('A 혼자 엔트리 정리', 'unpublish', { token: deviceA?.deviceToken, json: { entryId: solo.body?.entryId } });
 await call('A 친구 엔트리 정리', 'unpublish', { token: deviceA?.deviceToken, json: { entryId: friendA.body?.entryId } });
 

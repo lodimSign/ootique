@@ -1,8 +1,15 @@
 # Ootique 상태
 
-업데이트: 2026-08-06
+업데이트: 2026-08-07
 
 ## 지금 상태 한 줄
+
+공개 투표 신고 기능(C단계 UGC 첫 항목)이 8/7에 서버·프리뷰까지 반영됐다. 실사용자 페이지(v.html) 교체만 lodim 지시 대기.
+
+## 프리뷰 자동 반영 규칙 (2026-08-07 lodim 승인, 상시)
+
+코딩이 끝나면 lodim의 배포 지시 없이 여기까지 자동으로 반영한다 — ① 추가 전용 DB 마이그레이션(`db push`) ② 하위호환 서버 함수(`functions deploy`) ③ 프리뷰 페이지 `docs/v-dev.html`(맨 위 보라색 `프리뷰 (테스트용)` 띠). lodim은 https://lodimsign.github.io/ootique/v-dev.html 에서 결과를 바로 본다.
+**실사용자 페이지(v.html) 교체와 앱 스토어 배포는 여전히 lodim 지시가 필요하다.** LB의 develop 자동 배포와 같은 원리다.
 
 공개 투표·순위 A단계를 8/6에 시작했다. 실행 명세는 `docs/friend-flow-scenario.md`의 `A단계 실행 스펙` 절이고, 서버 절반(마이그레이션·`vote` 함수·`vote-check.mjs`)을 먼저 만든 뒤 앱 절반을 붙인다. 안드로이드 공유 이미지 버그는 고쳐서 커밋했고 폰 확인만 남았다.
 
@@ -34,7 +41,7 @@
 2. ~~A단계 서버 배포와 검사~~ — 2026-08-06 완료. `db push`, `functions deploy vote`, `npm run test:vote` 전부 통과. 기존 `test:friend-sync:e2e`도 회귀 없이 통과.
 3. ~~에뮬레이터 Expo Go로 공개 스위치 → 저장 → 링크 공유 화면 확인~~ — 2026-08-06 완료. 아래 `알려진 점`에 결과를 적었다.
 4. 공개 사진이 실제로 서버에 올라가기 시작하는 시점에 `docs/index.html` 처리방침과 `docs/app-store-metadata.md` 개인정보 표시를 같이 고친다. **기능보다 먼저 고치면 사실과 다르고, 늦게 고치면 허위 표시다.**
-5. B단계 순위 탭, C단계 UGC 4종(신고·차단·처리 절차·무관용 EULA).
+5. B단계 순위 탭, C단계 UGC 나머지 3종(차단·처리 절차·무관용 EULA). ~~신고~~ — 2026-08-07 완료: `vote_reports` 테이블(같은 기기 중복 1회, 3회 자동 숨김·삭제 없음) + `vote` 함수 `action=report` + 프리뷰 `v-dev.html` 신고 UI + `test:vote` 신고 검사 8건 실서버 통과. v.html 교체는 lodim 확인 뒤.
 6. 두 기기에서 코드 생성 → 참가 승인 → 각자 업로드 → 상대 사진 자동 표시를 수동 확인한다. **B 업로드와 PNG 스크린샷·고해상도 원본까지 본다**. 절차는 `docs/app-development-manual.md` 2.2절.
 7. App Store Connect에 `com.lodim.ootique.plus` 비소모성 상품을 만들고 4,900원 가격대로 설정한다.
 8. 구매 성공·취소·실패·보류·복원·앱 재실행과 8일째 삭제를 개발 빌드에서 확인한다.

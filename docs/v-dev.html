@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ootique · 오늘의 컬러 투표</title>
+    <meta property="og:title" content="누가 오늘의 컬러를 더 잘 살렸나요?" />
+    <meta property="og:description" content="Ootique는 매일 하나의 랜덤 컬러를 줍니다. 눌러서 투표하고 앱도 받아보세요." />
+    <meta property="og:image" content="https://lodimsign.github.io/ootique/og.png" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <style>
+      :root { color-scheme: light dark; }
+      body { align-items: center; background: #FAF7F1; color: #2A2622; display: flex; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; gap: 16px; margin: 0; padding: 28px 16px 48px; }
+      .brand { color: #8A8177; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; }
+      h1 { font-size: 20px; margin: 0; text-align: center; }
+      .pair { display: flex; gap: 10px; max-width: 520px; width: 100%; }
+      .side { background: #EFEAE1; border: 1px solid #E4DED3; border-radius: 20px; cursor: pointer; flex: 1; overflow: hidden; padding: 0; position: relative; }
+      .side[disabled] { cursor: default; opacity: 0.55; }
+      .side.picked { border-color: #2A2622; border-width: 3px; opacity: 1; }
+      .side img, .solo img { aspect-ratio: 4 / 5; display: block; object-fit: cover; width: 100%; }
+      .side span { background: rgba(0, 0, 0, 0.55); border-radius: 999px; color: #fff; font-weight: 700; left: 10px; padding: 2px 10px; position: absolute; top: 10px; }
+      .solo { border: 1px solid #E4DED3; border-radius: 20px; max-width: 340px; overflow: hidden; width: 100%; }
+      .msg { color: #6B6358; margin: 0; min-height: 22px; text-align: center; }
+      .get { background: #2A2622; border-radius: 999px; color: #FAF7F1; font-weight: 700; margin-top: 8px; padding: 14px 28px; text-decoration: none; }
+      .note { color: #8A8177; font-size: 12px; max-width: 340px; text-align: center; }
+      .reports { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 26px; }
+      .report { background: none; border: none; color: #8A8177; cursor: pointer; font-size: 12px; padding: 4px 8px; text-decoration: underline; }
+      @media (prefers-color-scheme: dark) {
+        body { background: #1B1917; color: #F2EDE5; }
+        .msg { color: #B6ADA1; }
+        .get { background: #F2EDE5; color: #1B1917; }
+        .side.picked { border-color: #F2EDE5; }
+      }
+    </style>
+  </head>
+  <body>
+<div style="background:#7c3aed;color:#fff;text-align:center;font-size:12px;font-weight:700;padding:6px 0;">프리뷰 (테스트용) — 실제 페이지는 v.html</div>
+    <div class="brand">ootique</div>
+    <h1 id="title">불러오는 중…</h1>
+    <div id="card"></div>
+    <p class="msg" id="msg"></p>
+    <div class="reports" id="reports"></div>
+    <a class="get" href="#" id="get">앱 받기 · 곧 출시</a>
+    <p class="note">Ootique는 매일 하나의 랜덤 컬러를 주고, 그 컬러를 살린 오늘의 옷을 기록하는 앱입니다.</p>
+
+    <script>
+      var API = 'https://lkgipsszgvpcabdefvhc.supabase.co/functions/v1/vote';
+      var token = new URLSearchParams(location.search).get('t') || '';
+      var title = document.getElementById('title');
+      var card = document.getElementById('card');
+      var msg = document.getElementById('msg');
+
+      // 투표자 식별. 지울 수 있으므로 완벽한 중복 차단은 아니다 —
+      // 그래서 순위는 총 득표가 아니라 승률로 내고 최소 표 수를 둔다.
+      function voterId() {
+        var saved = null;
+        try { saved = localStorage.getItem('ootique.voter'); } catch (error) { saved = null; }
+        if (saved) return saved;
+        var bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        var made = btoa(String.fromCharCode.apply(null, bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        try { localStorage.setItem('ootique.voter', made); } catch (error) { /* 사파리 비공개 모드 */ }
+        return made;
+      }
+
+      function fail(text) {
+        title.textContent = '지난 카드예요';
+        msg.textContent = text;
+      }
+
+      function vote(side, buttons) {
+        buttons.forEach(function (button) { button.disabled = true; });
+        buttons[side === 'a' ? 0 : 1].classList.add('picked');
+        fetch(API + '?action=vote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ t: token, side: side, voter: voterId() }),
+        })
+          .then(function (response) { return response.json(); })
+          .then(function (data) {
+            if (data.error === 'already_voted') { msg.textContent = '이미 투표하셨어요. A ' + data.a + ' · B ' + data.b; return; }
+            if (data.error) {
+              msg.textContent = '투표를 저장하지 못했어요.';
+              buttons.forEach(function (button) { button.disabled = false; button.classList.remove('picked'); });
+              return;
+            }
+            msg.textContent = '고마워요! A ' + data.a + ' · B ' + data.b;
+          })
+          .catch(function () {
+            msg.textContent = '연결에 실패했어요. 다시 시도해 주세요.';
+            buttons.forEach(function (button) { button.disabled = false; button.classList.remove('picked'); });
+          });
+      }
+
+      // 신고 (앱스토어 UGC 요건). 사유를 고르면 저장되고, 다른 사람 3명이 신고하면 서버가 숨긴다.
+      var reports = document.getElementById('reports');
+      var REASONS = [['inappropriate', '부적절한 사진'], ['spam', '스팸'], ['other', '기타']];
+      var lastKind = 'entry';
+
+      function renderReports() {
+        reports.innerHTML = '';
+        var sides = lastKind === 'match' ? [['a', 'A 사진 신고'], ['b', 'B 사진 신고']] : [['a', '사진 신고']];
+        sides.forEach(function (pair) {
+          var button = document.createElement('button');
+          button.className = 'report';
+          button.textContent = pair[1];
+          button.addEventListener('click', function () { askReason(pair[0]); });
+          reports.appendChild(button);
+        });
+      }
+
+      function askReason(side) {
+        reports.innerHTML = '';
+        msg.textContent = '신고 사유를 골라주세요.';
+        REASONS.concat([['cancel', '취소']]).forEach(function (pair) {
+          var button = document.createElement('button');
+          button.className = 'report';
+          button.textContent = pair[1];
+          button.addEventListener('click', function () {
+            if (pair[0] === 'cancel') { msg.textContent = ''; renderReports(); return; }
+            sendReport(side, pair[0]);
+          });
+          reports.appendChild(button);
+        });
+      }
+
+      function sendReport(side, reason) {
+        reports.innerHTML = '';
+        fetch(API + '?action=report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ t: token, side: side, reason: reason, reporter: voterId() }),
+        })
+          .then(function (response) { return response.json(); })
+          .then(function (data) {
+            if (data.error) { msg.textContent = '신고를 접수하지 못했어요. 다시 시도해 주세요.'; renderReports(); return; }
+            if (data.hidden) {
+              card.innerHTML = '';
+              title.textContent = '숨김 처리된 카드예요';
+              msg.textContent = '신고가 접수되어 이 사진은 숨김 처리됐어요.';
+              return;
+            }
+            msg.textContent = '신고가 접수됐어요. 확인 후 조치할게요.';
+            renderReports();
+          })
+          .catch(function () { msg.textContent = '연결에 실패했어요. 다시 시도해 주세요.'; renderReports(); });
+      }
+
+      function render(data) {
+        lastKind = data.kind;
+        renderReports();
+        if (data.kind !== 'match') {
+          title.textContent = '오늘의 컬러를 입고 나왔어요';
+          card.className = 'solo';
+          card.innerHTML = '<img alt="OOTD">';
+          card.firstChild.src = data.images[0];
+          msg.textContent = 'Ootique에서 오늘의 컬러를 받아보세요.';
+          return;
+        }
+        title.textContent = '누가 오늘의 컬러를 더 잘 살렸나요?';
+        card.className = 'pair';
+        card.innerHTML =
+          '<button class="side"><img alt="A"><span>A</span></button>' +
+          '<button class="side"><img alt="B"><span>B</span></button>';
+        var buttons = Array.prototype.slice.call(card.querySelectorAll('.side'));
+        buttons.forEach(function (button, index) {
+          button.querySelector('img').src = data.images[index];
+          button.addEventListener('click', function () { vote(index === 0 ? 'a' : 'b', buttons); });
+        });
+        msg.textContent = '마음에 드는 쪽을 눌러주세요.';
+      }
+
+      if (!token) {
+        fail('링크가 올바르지 않아요.');
+      } else {
+        fetch(API + '?action=card&t=' + encodeURIComponent(token))
+          .then(function (response) { return response.ok ? response.json() : Promise.reject(); })
+          .then(render)
+          .catch(function () { fail('공개가 내려갔거나 7일이 지나 사라진 카드입니다.'); });
+      }
+    </script>
+  </body>
+</html>

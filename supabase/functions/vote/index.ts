@@ -331,6 +331,31 @@ async function castVote(req: Request, body: Record<string, unknown>) {
   return json(200, { a: Number(row?.votes_a ?? 0), b: Number(row?.votes_b ?? 0) }, headers);
 }
 
+// 신고. 같은 브라우저(localStorage ID)의 중복 신고는 vote_reports 기본키가 1회로 센다.
+// 3회부터 report_vote_entry가 엔트리를 숨긴다 — 파일은 검토용으로 남는다.
+const REPORT_REASONS = ['inappropriate', 'spam', 'other'];
+
+async function report(req: Request, body: Record<string, unknown>) {
+  if (!await consumeRateLimit(req, 'report', 10)) return json(429, { error: 'too_many_requests' });
+  const token = String(body.t ?? '');
+  const resolved = await resolveToken(token);
+  if (!resolved) return json(404, { error: 'not_found' });
+  const target = resolved.sides[body.side === 'b' ? 1 : 0];
+
+  const reason = String(body.reason ?? '');
+  if (!REPORT_REASONS.includes(reason)) return json(400, { error: 'invalid_reason' });
+  const reporterId = String(body.reporter ?? '');
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(reporterId)) return json(400, { error: 'invalid_reporter' });
+  const reporterHash = await sha256(`${reporterId}:report:${voteSecret}`);
+
+  const { data, error } = await supabase.rpc('report_vote_entry', {
+    p_entry_id: target.entryId, p_reporter_hash: reporterHash, p_reason: reason,
+  });
+  if (error) return json(500, { error: 'report_failed' });
+  const row = data?.[0];
+  return json(200, { reportCount: Number(row?.report_count ?? 0), hidden: row?.is_hidden === true });
+}
+
 async function board(url: URL) {
   const date = url.searchParams.get('date') || seoulDate();
   const { data, error } = await supabase
@@ -381,6 +406,7 @@ Deno.serve(async (req) => {
     if (action === 'purge') return await purge(req);
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
     if (action === 'vote') return await castVote(req, body);
+    if (action === 'report') return await report(req, body);
     if (action === 'unpublish') return await unpublish(req, body);
     return json(404, { error: 'unknown_action' });
   } catch {
