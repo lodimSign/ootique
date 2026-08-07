@@ -1,5 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 
+import { tf } from './i18n.ts';
+
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://lkgipsszgvpcabdefvhc.supabase.co';
 const functionUrl = `${supabaseUrl}/functions/v1/vote`;
 const DEVICE_KEY = 'ootique.vote-device.v1';
@@ -20,7 +22,7 @@ export function voteLink(token: string): string {
 }
 
 export function shareMessage(colorName: string, token: string): string {
-  return `오늘의 컬러는 ${colorName}. 어느 쪽이 더 잘 살렸는지 골라주세요.\n${voteLink(token)}`;
+  return tf('share.message', { color: colorName, link: voteLink(token) });
 }
 
 async function deviceToken(): Promise<string> {

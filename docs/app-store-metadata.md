@@ -141,3 +141,51 @@ Apple 개인정보 표시에는 별도 항목으로 신고하지 않지만, 심�
 친구 모드는 서로 코드를 직접 주고받아 연결한 1:1 비공개 방입니다.
 공개 피드, 검색, 낯선 사용자 노출이 없습니다. 사용자는 자기 사진을 언제든 삭제할 수 있습니다.
 (공개 투표·순위는 이번 버전에 포함되지 않습니다. 추가할 때 신고·차단 기능을 함께 넣어야 합니다.)
+
+## 영어 스토어 등록정보 (English Store Listing)
+
+앱은 기기 언어가 한국어면 한국어, 아니면 영어로 표시된다(`src/i18n.ts`).
+App Store Connect에서 영어(미국)를 추가 현지화로 등록할 때 아래를 그대로 쓴다.
+앱 이름과 번들 정보는 기본 정보와 같다.
+
+- App Name: `Ootique: Spin Your Style`
+- Subtitle: `One color a day, your OOTD`
+
+### Promotional Text
+
+What color should you wear today? Spin the color roulette and capture an OOTD that makes it shine.
+
+### Description
+
+Ootique is a tiny daily fashion challenge built around one color a day.
+
+Check today's color, put together an outfit that makes it shine, and snap a photo. Every photo turns into a beautiful Ootique-style share card.
+
+Enter the same 6-character code as a friend and you both get the same color. Put both photos on one card and share it with your friends.
+
+- One fixed color per day
+- OOTD challenge solo or with a friend
+- Camera and photo library support
+- Solo and friend A/B share cards
+- Local history of your last 7 days
+- No account, no sign-up
+
+Solo-mode photos and records stay on your device and are never uploaded.
+
+In friend mode, one photo is sent to private storage so the two connected people can see each other's outfit. Only the person with the same code can view it, and you can replace or delete it anytime. No account, email, or name required.
+
+### Keywords
+
+OOTD,fashion,outfit,color,style,challenge,friend,roulette,daily look,wardrobe,ootd diary
+
+### Screenshot Captions
+
+1. `One color a day. Spin the roulette.`
+2. `Turn today's color into your OOTD.`
+3. `Same code, same color — challenge a friend.`
+4. `Your week of looks, kept on your device.`
+
+### Ootique Plus (In-App Purchase)
+
+- Display Name: `Ootique Plus`
+- Description: `Keep every OOTD record on this device, forever.`

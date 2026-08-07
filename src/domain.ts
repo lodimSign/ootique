@@ -1,3 +1,5 @@
+import { t } from './i18n.ts';
+
 export type ChallengeMode = 'solo' | 'friend';
 
 export type Screen = 'today' | 'capture' | 'share' | 'history';
@@ -24,24 +26,24 @@ export type OotdRecord = {
 };
 
 export const OOTIQUE_COLORS: readonly OotiqueColor[] = [
-  { id: 'butter-yellow', name: '버터 옐로', hex: '#F6D86B', mood: '밝고 따뜻한 오늘의 컬러' },
-  { id: 'tomato-red', name: '토마토 레드', hex: '#D95D4F', mood: '생기 있고 대담한 오늘의 컬러' },
-  { id: 'denim-blue', name: '데님 블루', hex: '#4F7196', mood: '편안하고 단단한 오늘의 컬러' },
-  { id: 'sage-green', name: '세이지 그린', hex: '#93A98C', mood: '차분하고 자연스러운 오늘의 컬러' },
-  { id: 'lilac', name: '라일락', hex: '#B7A3D6', mood: '부드럽고 신비로운 오늘의 컬러' },
-  { id: 'peach', name: '피치', hex: '#F2B184', mood: '사랑스럽고 산뜻한 오늘의 컬러' },
-  { id: 'coral', name: '코랄', hex: '#ED8178', mood: '활기차고 친근한 오늘의 컬러' },
-  { id: 'sky-blue', name: '스카이 블루', hex: '#9EC4E5', mood: '맑고 가벼운 오늘의 컬러' },
-  { id: 'cream', name: '크림', hex: '#EEDDBA', mood: '포근하고 담백한 오늘의 컬러' },
-  { id: 'chocolate', name: '초콜릿', hex: '#765044', mood: '깊고 안정적인 오늘의 컬러' },
-  { id: 'charcoal', name: '차콜', hex: '#45464B', mood: '도시적이고 절제된 오늘의 컬러' },
-  { id: 'olive', name: '올리브', hex: '#7C824F', mood: '빈티지하고 여유로운 오늘의 컬러' },
-  { id: 'rose-pink', name: '로즈 핑크', hex: '#D889A2', mood: '우아하고 낭만적인 오늘의 컬러' },
-  { id: 'cobalt', name: '코발트', hex: '#315EB5', mood: '선명하고 자신감 있는 오늘의 컬러' },
-  { id: 'mint', name: '민트', hex: '#8FC9B8', mood: '상쾌하고 경쾌한 오늘의 컬러' },
-  { id: 'burgundy', name: '버건디', hex: '#7A3344', mood: '성숙하고 분위기 있는 오늘의 컬러' },
-  { id: 'apricot', name: '애프리콧', hex: '#EAA26E', mood: '따뜻하고 유쾌한 오늘의 컬러' },
-  { id: 'silver-gray', name: '실버 그레이', hex: '#A7A9AE', mood: '깨끗하고 세련된 오늘의 컬러' },
+  { id: 'butter-yellow', name: t('color.butter-yellow'), hex: '#F6D86B', mood: t('mood.butter-yellow') },
+  { id: 'tomato-red', name: t('color.tomato-red'), hex: '#D95D4F', mood: t('mood.tomato-red') },
+  { id: 'denim-blue', name: t('color.denim-blue'), hex: '#4F7196', mood: t('mood.denim-blue') },
+  { id: 'sage-green', name: t('color.sage-green'), hex: '#93A98C', mood: t('mood.sage-green') },
+  { id: 'lilac', name: t('color.lilac'), hex: '#B7A3D6', mood: t('mood.lilac') },
+  { id: 'peach', name: t('color.peach'), hex: '#F2B184', mood: t('mood.peach') },
+  { id: 'coral', name: t('color.coral'), hex: '#ED8178', mood: t('mood.coral') },
+  { id: 'sky-blue', name: t('color.sky-blue'), hex: '#9EC4E5', mood: t('mood.sky-blue') },
+  { id: 'cream', name: t('color.cream'), hex: '#EEDDBA', mood: t('mood.cream') },
+  { id: 'chocolate', name: t('color.chocolate'), hex: '#765044', mood: t('mood.chocolate') },
+  { id: 'charcoal', name: t('color.charcoal'), hex: '#45464B', mood: t('mood.charcoal') },
+  { id: 'olive', name: t('color.olive'), hex: '#7C824F', mood: t('mood.olive') },
+  { id: 'rose-pink', name: t('color.rose-pink'), hex: '#D889A2', mood: t('mood.rose-pink') },
+  { id: 'cobalt', name: t('color.cobalt'), hex: '#315EB5', mood: t('mood.cobalt') },
+  { id: 'mint', name: t('color.mint'), hex: '#8FC9B8', mood: t('mood.mint') },
+  { id: 'burgundy', name: t('color.burgundy'), hex: '#7A3344', mood: t('mood.burgundy') },
+  { id: 'apricot', name: t('color.apricot'), hex: '#EAA26E', mood: t('mood.apricot') },
+  { id: 'silver-gray', name: t('color.silver-gray'), hex: '#A7A9AE', mood: t('mood.silver-gray') },
 ] as const;
 
 export function localDateKey(date = new Date()): string {

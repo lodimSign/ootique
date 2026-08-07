@@ -47,6 +47,7 @@ import {
   type FriendSession,
   type FriendState,
 } from './src/friendSync';
+import { t, tf } from './src/i18n';
 import { THEME, styles } from './src/theme';
 import { BottomNav } from './src/components/ui';
 import { TodayScreen } from './src/components/TodayScreen';
@@ -108,9 +109,9 @@ function OotiqueApp() {
       try {
         await finishTransaction({ purchase, isConsumable: false });
         setIsPlus(true);
-        Alert.alert('Ootique Plus가 열렸어요', '이 기기의 모든 로컬 기록을 계속 보관할 수 있어요.');
+        Alert.alert(t('plus.unlockedTitle'), t('plus.unlockedBody'));
       } catch {
-        Alert.alert('구매 확인을 마치지 못했어요', '앱을 다시 실행하거나 구매 복원을 눌러 주세요.');
+        Alert.alert(t('plus.finishFailTitle'), t('plus.finishFailBody'));
       } finally {
         setPurchaseBusy(false);
       }
@@ -118,7 +119,7 @@ function OotiqueApp() {
     onPurchaseError: (error) => {
       setPurchaseBusy(false);
       const message = purchaseErrorMessage(error.code ?? 'unknown');
-      if (message) Alert.alert('구매를 확인해 주세요', message);
+      if (message) Alert.alert(t('plus.errorTitle'), message);
     },
     onError: () => setPurchaseBusy(false),
   });
@@ -145,7 +146,7 @@ function OotiqueApp() {
   useEffect(() => {
     loadRecords()
       .then(setRecords)
-      .catch(() => Alert.alert('기록을 불러오지 못했어요', '앱을 다시 실행해 주세요.'))
+      .catch(() => Alert.alert(t('app.loadFailTitle'), t('app.loadFailBody')))
       .finally(() => setRecordsLoaded(true));
   }, []);
 
@@ -241,10 +242,8 @@ function OotiqueApp() {
       restoring.current = false;
       setPurchaseBusy(false);
       Alert.alert(
-        purchased ? '구매를 복원했어요' : '복원할 구매가 없어요',
-        purchased
-          ? 'Ootique Plus를 다시 사용할 수 있어요.'
-          : '현재 Apple 계정에서 Ootique Plus 구매를 찾지 못했어요.',
+        purchased ? t('plus.restoredTitle') : t('plus.noRestoreTitle'),
+        purchased ? t('plus.restoredBody') : t('plus.noRestoreBody'),
       );
     }
   }, [availablePurchases]);
@@ -276,7 +275,7 @@ function OotiqueApp() {
       .then(setRecords)
       .catch(() => {
         lastPrunedCutoff.current = null;
-        Alert.alert('오래된 기록을 정리하지 못했어요', '앱을 다시 실행하면 남은 사진 정리를 다시 시도해요.');
+        Alert.alert(t('app.pruneFailTitle'), t('app.pruneFailBody'));
       })
       .finally(() => {
         setOperationBusy(false);
@@ -286,7 +285,7 @@ function OotiqueApp() {
 
   const buyPlus = async () => {
     if (!storeConnected) {
-      Alert.alert('App Store에 연결할 수 없어요', '잠시 후 다시 시도해 주세요.');
+      Alert.alert(t('plus.storeOfflineTitle'), t('common.retryLater'));
       return;
     }
     setPurchaseBusy(true);
@@ -297,13 +296,13 @@ function OotiqueApp() {
       });
     } catch {
       setPurchaseBusy(false);
-      Alert.alert('구매를 시작하지 못했어요', '잠시 후 다시 시도해 주세요.');
+      Alert.alert(t('plus.buyStartFailTitle'), t('common.retryLater'));
     }
   };
 
   const restorePlus = async () => {
     if (!storeConnected) {
-      Alert.alert('App Store에 연결할 수 없어요', '잠시 후 다시 시도해 주세요.');
+      Alert.alert(t('plus.storeOfflineTitle'), t('common.retryLater'));
       return;
     }
     restoring.current = true;
@@ -313,7 +312,7 @@ function OotiqueApp() {
     } catch {
       restoring.current = false;
       setPurchaseBusy(false);
-      Alert.alert('구매를 복원하지 못했어요', '네트워크를 확인한 뒤 다시 시도해 주세요.');
+      Alert.alert(t('plus.restoreFailTitle'), t('common.checkNetworkRetry'));
     }
   };
 
@@ -331,7 +330,7 @@ function OotiqueApp() {
 
   const openCapture = () => {
     if (mode === 'friend' && normalizedCode.length !== 6) {
-      Alert.alert('친구 코드가 필요해요', '6자리 코드를 입력하거나 새로 만들어 주세요.');
+      Alert.alert(t('friend.codeNeededTitle'), t('friend.codeNeededEnterOrCreate'));
       return;
     }
     setMineUri(todayRecord?.photoUri ?? null);
@@ -346,7 +345,7 @@ function OotiqueApp() {
       if (source === 'camera') {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
         if (!permission.granted) {
-          Alert.alert('카메라 권한이 필요해요', '설정에서 Ootique의 카메라 접근을 허용해 주세요.');
+          Alert.alert(t('capture.cameraPermTitle'), t('capture.cameraPermBody'));
           return;
         }
       }
@@ -368,13 +367,13 @@ function OotiqueApp() {
         else setFriendUri(result.assets[0].uri);
       }
     } catch {
-      Alert.alert('사진을 열지 못했어요', '잠시 후 다시 시도해 주세요.');
+      Alert.alert(t('capture.photoOpenFailTitle'), t('common.retryLater'));
     }
   };
 
   const createPair = async () => {
     if (!friendSyncConfigured) {
-      Alert.alert('친구 연결 준비 중이에요', 'Supabase 공개 설정값을 연결한 빌드에서 사용할 수 있어요.');
+      Alert.alert(t('friend.notConfiguredTitle'), t('friend.notConfiguredBody'));
       return;
     }
     setFriendBusy(true);
@@ -387,17 +386,17 @@ function OotiqueApp() {
       setRevealed(false);
       if (session.inviteCode) {
         Clipboard.setStringAsync(session.inviteCode)
-          .then(() => Alert.alert('친구 코드가 복사됐어요', '카카오톡이나 다른 메신저에 바로 붙여넣을 수 있어요.'))
-          .catch(() => Alert.alert('코드는 만들었어요', '자동 복사는 실패했어요. 화면의 코드를 길게 눌러 복사해 주세요.'));
+          .then(() => Alert.alert(t('friend.codeCopiedTitle'), t('friend.codeCopiedBody')))
+          .catch(() => Alert.alert(t('friend.codeMadeNoCopyTitle'), t('friend.codeMadeNoCopyBody')));
       }
     } catch {
-      Alert.alert('코드를 만들지 못했어요', '네트워크를 확인한 뒤 다시 시도해 주세요.');
+      Alert.alert(t('friend.codeCreateFailTitle'), t('common.checkNetworkRetry'));
     } finally { setFriendBusy(false); }
   };
 
   const joinPair = async () => {
     if (normalizedCode.length !== 6) {
-      Alert.alert('친구 코드가 필요해요', '친구가 보낸 6자리 코드를 입력해 주세요.');
+      Alert.alert(t('friend.codeNeededTitle'), t('friend.codeNeededFromFriend'));
       return;
     }
     setFriendBusy(true);
@@ -406,9 +405,9 @@ function OotiqueApp() {
       setFriendSession(session);
       setFriendState(null);
       setFriendUri(null);
-      Alert.alert('참가 요청을 보냈어요', '코드를 만든 친구가 승인하면 사진이 자동 연결돼요.');
+      Alert.alert(t('friend.joinSentTitle'), t('friend.joinSentBody'));
     } catch {
-      Alert.alert('친구에게 연결하지 못했어요', '코드가 만료됐거나 이미 사용됐는지 확인해 주세요.');
+      Alert.alert(t('friend.joinFailTitle'), t('friend.joinFailBody'));
     } finally { setFriendBusy(false); }
   };
 
@@ -418,10 +417,10 @@ function OotiqueApp() {
       setFriendCode(pasted);
       setRevealed(false);
       if (pasted.length !== 6) {
-        Alert.alert('6자리 코드가 아니에요', `현재 ${pasted.length}자리예요. 친구에게 코드를 다시 받아 주세요.`);
+        Alert.alert(t('friend.pasteNot6Title'), tf('friend.pasteNot6Body', { n: pasted.length }));
       }
     } catch {
-      Alert.alert('코드를 붙여넣지 못했어요', '클립보드 접근을 확인한 뒤 다시 시도해 주세요.');
+      Alert.alert(t('friend.pasteFailTitle'), t('friend.pasteFailBody'));
     }
   };
 
@@ -433,7 +432,7 @@ function OotiqueApp() {
       setFriendSession(session);
       setFriendState(await getFriendState(session));
     } catch {
-      Alert.alert('승인하지 못했어요', '참가 요청 상태를 다시 확인해 주세요.');
+      Alert.alert(t('friend.approveFailTitle'), t('friend.approveFailBody'));
     } finally { setFriendBusy(false); }
   };
 
@@ -457,7 +456,7 @@ function OotiqueApp() {
           ],
         });
         if (!friendUri) {
-          Alert.alert('내 사진을 올렸어요', '친구가 사진을 올리면 이 화면에 자동으로 나타나요.');
+          Alert.alert(t('save.uploadedMineTitle'), t('save.uploadedMineBody'));
           return;
         }
       }
@@ -479,7 +478,7 @@ function OotiqueApp() {
           });
         } catch (error) {
           const reason = error instanceof Error ? error.message : String(error);
-          Alert.alert('공개하지 못했어요', `${reason}\n\n사진은 기기에 저장했어요. 공유 카드에서 다시 시도할 수 있어요.`);
+          Alert.alert(t('save.publishFailTitle'), tf('save.publishFailBody', { reason }));
         }
       }
 
@@ -502,7 +501,7 @@ function OotiqueApp() {
     } catch (error) {
       // 원인을 삼키면 실기기에서 서버 거절(invalid_photo 등)과 기기 저장 실패를 구분할 수 없다.
       const reason = error instanceof Error ? error.message : String(error);
-      Alert.alert('사진을 저장하지 못했어요', `${reason}\n\n네트워크와 기기 저장 공간을 확인한 뒤 다시 시도해 주세요.`);
+      Alert.alert(t('save.failTitle'), tf('save.failBody', { reason }));
     } finally {
       setOperationBusy(false);
     }
@@ -517,10 +516,10 @@ function OotiqueApp() {
   };
 
   const confirmDelete = (record: OotdRecord) => {
-    Alert.alert('이 기록을 삭제할까요?', '사진과 기록이 이 기기에서 완전히 삭제됩니다.', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('history.deleteConfirmTitle'), t('history.deleteConfirmBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           setOperationBusy(true);
@@ -529,7 +528,7 @@ function OotiqueApp() {
             if (record.publicEntryId) await unpublishEntry(record.publicEntryId).catch(() => {});
             setRecords(await removeRecord(record));
           } catch {
-            Alert.alert('삭제하지 못했어요', '잠시 후 다시 시도해 주세요.');
+            Alert.alert(t('history.deleteFailTitle'), t('common.retryLater'));
           } finally {
             setOperationBusy(false);
           }
@@ -539,10 +538,10 @@ function OotiqueApp() {
   };
 
   const confirmDeleteAll = () => {
-    Alert.alert('모든 로컬 데이터를 삭제할까요?', '저장된 OOTD 사진과 기록은 복구할 수 없습니다.', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('history.deleteAllConfirmTitle'), t('history.deleteAllConfirmBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '모두 삭제',
+        text: t('history.deleteAllAction'),
         style: 'destructive',
         onPress: async () => {
           setOperationBusy(true);
@@ -554,7 +553,7 @@ function OotiqueApp() {
             setRecords([]);
             setActiveRecord(null);
           } catch {
-            Alert.alert('삭제하지 못했어요', '잠시 후 다시 시도해 주세요.');
+            Alert.alert(t('history.deleteFailTitle'), t('common.retryLater'));
           } finally {
             setOperationBusy(false);
           }
@@ -572,7 +571,7 @@ function OotiqueApp() {
     return (
       <SafeAreaView style={styles.loadingScreen}>
         <ActivityIndicator color={THEME.yellowDark} />
-        <Text style={styles.loadingText}>Ootique를 준비하고 있어요</Text>
+        <Text style={styles.loadingText}>{t('app.loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -603,7 +602,7 @@ function OotiqueApp() {
           onApprove={approveJoin}
           onReveal={() => {
             if (mode === 'friend' && normalizedCode.length !== 6) {
-              Alert.alert('친구 코드가 필요해요', '같은 6자리 코드를 입력하면 같은 컬러가 나와요.');
+              Alert.alert(t('friend.codeNeededTitle'), t('friend.codeNeededSameColor'));
               return;
             }
             setRevealed(true);
@@ -643,7 +642,7 @@ function OotiqueApp() {
       {screen === 'history' && (
         <HistoryScreen
           isPlus={isPlus}
-          plusPrice={products.find((product) => product.id === PLUS_PRODUCT_ID)?.displayPrice ?? '4,900원'}
+          plusPrice={products.find((product) => product.id === PLUS_PRODUCT_ID)?.displayPrice ?? t('plus.priceFallback')}
           purchaseBusy={purchaseBusy}
           storeConnected={storeConnected}
           records={records}

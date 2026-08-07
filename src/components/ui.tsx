@@ -3,6 +3,7 @@ import { Image, Modal, Pressable, Text, View, type ImageStyle, type StyleProp, t
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { Screen } from '../domain';
+import { t, tf } from '../i18n';
 import { styles } from '../theme';
 
 export function BrandHeader() {
@@ -17,7 +18,7 @@ export function BrandHeader() {
 export function ScreenHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return (
     <View style={styles.screenHeader}>
-      <Pressable accessibilityLabel="뒤로" accessibilityRole="button" onPress={onBack} style={styles.backButton}>
+      <Pressable accessibilityLabel={t('common.back')} accessibilityRole="button" onPress={onBack} style={styles.backButton}>
         <Text style={styles.backButtonText}>‹</Text>
       </Pressable>
       <Text style={styles.screenHeaderTitle}>{title}</Text>
@@ -49,9 +50,9 @@ export function SmallButton({ label, onPress }: { label: string; onPress: () => 
 
 export function BottomNav({ active, onNavigate }: { active: Screen; onNavigate: (screen: Screen) => void }) {
   const items: { key: Screen; label: string; mark: string }[] = [
-    { key: 'today', label: '오늘', mark: '⌂' },
-    { key: 'capture', label: '촬영', mark: '＋' },
-    { key: 'history', label: '기록', mark: '▣' },
+    { key: 'today', label: t('nav.today'), mark: '⌂' },
+    { key: 'capture', label: t('nav.capture'), mark: '＋' },
+    { key: 'history', label: t('nav.history'), mark: '▣' },
   ];
   return (
     <SafeAreaView edges={['bottom']} style={styles.bottomNav}>
@@ -75,7 +76,7 @@ export function ZoomablePhoto({ label, style, uri }: { label: string; style: Sty
   const [zoomed, setZoomed] = useState(false);
   return (
     <Pressable
-      accessibilityLabel={`${label} 크게 보기`}
+      accessibilityLabel={tf('photo.zoomLabel', { label })}
       accessibilityRole="imagebutton"
       onPress={() => setZoomed(true)}
       style={styles.zoomTouch}
@@ -83,7 +84,7 @@ export function ZoomablePhoto({ label, style, uri }: { label: string; style: Sty
       <Image resizeMode="cover" source={{ uri }} style={style} />
       <Modal animationType="fade" onRequestClose={() => setZoomed(false)} transparent visible={zoomed}>
         <Pressable
-          accessibilityLabel="원본 사진 닫기"
+          accessibilityLabel={t('photo.closeZoom')}
           accessibilityRole="button"
           onPress={() => setZoomed(false)}
           style={styles.zoomBackdrop}

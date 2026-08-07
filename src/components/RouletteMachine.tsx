@@ -1,11 +1,12 @@
 import { Text, View } from 'react-native';
 
 import { OOTIQUE_COLORS } from '../domain';
+import { t } from '../i18n';
 import { THEME, styles } from '../theme';
 
 export function RouletteMachine({ color }: { color?: string }) {
   return (
-    <View accessibilityLabel="빈티지 컬러 룰렛" style={styles.machineShell}>
+    <View accessibilityLabel={t('today.rouletteLabel')} style={styles.machineShell}>
       <View style={styles.machineLabel}>
         <Text style={styles.machineLabelText}>✦ COLOR ROULETTE MACHINE ✦</Text>
       </View>

@@ -47,6 +47,7 @@ assert.equal(
   false,
 );
 assert.equal(purchaseErrorMessage('user-cancelled'), null);
-assert.match(purchaseErrorMessage('pending'), /기다리고/);
+// i18n 도입 후 문구는 실행 기기 언어를 따른다 — 언어별 원문 비교 대신 두 언어 중 하나인지 본다.
+assert.match(purchaseErrorMessage('pending'), /기다리고|awaiting approval/);
 
 console.log('domain-check: ok');

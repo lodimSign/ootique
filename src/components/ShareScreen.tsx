@@ -5,6 +5,7 @@ import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
 
 import { colorById, type OotdRecord } from '../domain';
+import { t, tf } from '../i18n';
 import { THEME, styles } from '../theme';
 import { appLink, currentShareToken, shareMessage, voteLink } from '../voteSync';
 import { ScreenHeader, ZoomablePhoto } from './ui';
@@ -29,20 +30,20 @@ export function ShareScreen({ record, onBack, onHistory, onUnpublish }: {
       const token = await currentShareToken(record.shareToken);
       await Share.share({ message: shareMessage(color.name, token) });
     } catch {
-      Alert.alert('링크를 보내지 못했어요', '잠시 후 다시 시도해 주세요.');
+      Alert.alert(t('share.linkSendFailTitle'), t('common.retryLater'));
     } finally {
       setLinking(false);
     }
   };
 
   const confirmUnpublish = () => {
-    Alert.alert('공개를 내릴까요?', '투표 페이지와 순위에서 바로 사라지고 서버의 사진도 지워집니다.', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('share.unpublishConfirmTitle'), t('share.unpublishConfirmBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '내리기',
+        text: t('share.unpublishAction'),
         style: 'destructive',
         onPress: async () => {
-          try { await onUnpublish(); } catch { Alert.alert('내리지 못했어요', '잠시 후 다시 시도해 주세요.'); }
+          try { await onUnpublish(); } catch { Alert.alert(t('share.unpublishFailTitle'), t('common.retryLater')); }
         },
       },
     ]);
@@ -54,7 +55,7 @@ export function ShareScreen({ record, onBack, onHistory, onUnpublish }: {
     try {
       // ponytail: RN Share의 url은 iOS 전용이라 안드로이드에서 이미지가 빠졌다. expo-sharing은 양쪽 다 파일을 보낸다.
       if (!(await Sharing.isAvailableAsync())) {
-        Alert.alert('이 기기에서는 공유를 열 수 없어요', '사진 앱으로 저장한 뒤 보내주세요.');
+        Alert.alert(t('share.unavailableTitle'), t('share.unavailableBody'));
         return;
       }
       const pixelRatio = PixelRatio.get();
@@ -72,16 +73,14 @@ export function ShareScreen({ record, onBack, onHistory, onUnpublish }: {
       await Sharing.shareAsync(uri, {
         mimeType: 'image/png',
         UTI: 'public.png',
-        dialogTitle: `오늘의 컬러는 ${color.name}`,
+        dialogTitle: tf('share.dialogTitle', { color: color.name }),
       });
       Alert.alert(
-        copied ? '링크도 복사했어요' : '링크를 복사하지 못했어요',
-        copied
-          ? '방금 보낸 대화에 그대로 붙여넣으면 친구가 눌러서 바로 열 수 있어요.'
-          : `이 주소를 직접 보내주세요.\n\n${link}`,
+        copied ? t('share.linkCopiedTitle') : t('share.linkCopyFailTitle'),
+        copied ? t('share.linkCopiedBody') : tf('share.linkCopyFailBody', { link }),
       );
     } catch {
-      Alert.alert('공유 카드를 만들지 못했어요', '잠시 후 다시 시도해 주세요.');
+      Alert.alert(t('share.cardFailTitle'), t('common.retryLater'));
     } finally {
       setSharing(false);
     }
@@ -89,16 +88,16 @@ export function ShareScreen({ record, onBack, onHistory, onUnpublish }: {
 
   return (
     <ScrollView contentContainerStyle={styles.shareContent}>
-      <ScreenHeader title="공유 카드" onBack={onBack} />
+      <ScreenHeader title={t('share.title')} onBack={onBack} />
       <View ref={cardRef} collapsable={false} style={styles.shareCard}>
         <View style={styles.shareBrandRow}>
           <Text style={styles.shareBrand}>ootique</Text>
           <Text style={styles.shareDate}>{record.dateKey}</Text>
         </View>
         <View style={record.mode === 'friend' ? styles.friendPhotos : styles.soloPhoto}>
-          <ZoomablePhoto label="내 OOTD" style={styles.sharePhoto} uri={record.photoUri} />
+          <ZoomablePhoto label={t('common.myOotd')} style={styles.sharePhoto} uri={record.photoUri} />
           {record.mode === 'friend' && record.partnerPhotoUri && (
-            <ZoomablePhoto label="친구 OOTD" style={styles.sharePhoto} uri={record.partnerPhotoUri} />
+            <ZoomablePhoto label={t('common.friendOotd')} style={styles.sharePhoto} uri={record.partnerPhotoUri} />
           )}
         </View>
         <View style={styles.shareResultRow}>
@@ -110,14 +109,14 @@ export function ShareScreen({ record, onBack, onHistory, onUnpublish }: {
         </View>
         <Text style={styles.shareQuestion}>
           {record.mode === 'friend'
-            ? '누가 오늘의 컬러를 더 잘 살렸나요?'
-            : '오늘의 컬러를 입고 나왔어요.'}
+            ? t('share.questionFriend')
+            : t('share.questionSolo')}
         </Text>
         {record.mode === 'friend' && <Text style={styles.shareCode}>FRIEND CODE · {record.friendCode}</Text>}
       </View>
       {record.shareToken ? (
         <Pressable accessibilityRole="button" disabled={linking} onPress={shareLink} style={styles.primaryButton}>
-          {linking ? <ActivityIndicator color={THEME.ink} /> : <Text style={styles.primaryButtonText}>친구에게 보내기</Text>}
+          {linking ? <ActivityIndicator color={THEME.ink} /> : <Text style={styles.primaryButtonText}>{t('share.sendToFriend')}</Text>}
         </Pressable>
       ) : null}
 
@@ -130,24 +129,24 @@ export function ShareScreen({ record, onBack, onHistory, onUnpublish }: {
         {sharing ? (
           <ActivityIndicator color={THEME.ink} />
         ) : (
-          <Text style={record.shareToken ? styles.secondaryButtonText : styles.primaryButtonText}>카드 이미지 공유</Text>
+          <Text style={record.shareToken ? styles.secondaryButtonText : styles.primaryButtonText}>{t('share.cardImage')}</Text>
         )}
       </Pressable>
 
       {record.publicEntryId ? (
         <Pressable accessibilityRole="button" onPress={confirmUnpublish} style={styles.secondaryButton}>
-          <Text style={styles.secondaryButtonText}>공개 내리기</Text>
+          <Text style={styles.secondaryButtonText}>{t('share.unpublishButton')}</Text>
         </Pressable>
       ) : null}
 
       <Pressable accessibilityRole="button" onPress={onHistory} style={styles.secondaryButton}>
-        <Text style={styles.secondaryButtonText}>지난 기록 보기</Text>
+        <Text style={styles.secondaryButtonText}>{t('share.viewHistory')}</Text>
       </Pressable>
 
       <Text style={styles.localOnly}>
         {record.shareToken
-          ? '어느 쪽으로 보내도 링크가 함께 갑니다. 누르면 앱이 없어도 바로 투표하고 앱을 받을 수 있어요.'
-          : '이 기록은 비공개예요. 카드 이미지와 함께 앱 주소만 복사됩니다.'}
+          ? t('share.footerWithLink')
+          : t('share.footerPrivate')}
       </Text>
     </ScrollView>
   );

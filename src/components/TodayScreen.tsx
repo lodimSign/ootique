@@ -2,6 +2,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput,
 
 import { OOTIQUE_COLORS, type ChallengeMode } from '../domain';
 import { type FriendSession, type FriendState } from '../friendSync';
+import { t } from '../i18n';
 import { styles } from '../theme';
 import { RouletteMachine } from './RouletteMachine';
 import { BrandHeader, SegmentButton, SmallButton } from './ui';
@@ -35,10 +36,10 @@ export function TodayScreen(props: TodayScreenProps) {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <BrandHeader />
         <View style={styles.segment}>
-          <SegmentButton active={props.mode === 'solo'} label="혼자" onPress={() => props.onModeChange('solo')} />
+          <SegmentButton active={props.mode === 'solo'} label={t('common.modeSolo')} onPress={() => props.onModeChange('solo')} />
           <SegmentButton
             active={props.mode === 'friend'}
-            label="친구와"
+            label={t('common.modeFriend')}
             onPress={() => props.onModeChange('friend')}
           />
         </View>
@@ -47,15 +48,15 @@ export function TodayScreen(props: TodayScreenProps) {
           <View style={styles.codeCard}>
             <View>
               <Text style={styles.eyebrow}>FRIEND CODE</Text>
-              <Text style={styles.codeHint}>같은 코드를 넣으면 같은 컬러가 나와요.</Text>
+              <Text style={styles.codeHint}>{t('friend.codeHint')}</Text>
             </View>
             <View style={styles.codeRow}>
               <TextInput
-                accessibilityLabel="친구 코드"
+                accessibilityLabel={t('friend.codeInputLabel')}
                 autoCapitalize="characters"
                 maxLength={6}
                 onChangeText={props.onFriendCodeChange}
-                placeholder="6자리 코드"
+                placeholder={t('friend.codePlaceholder')}
                 placeholderTextColor="#AAA59B"
                 style={styles.codeInput}
                 value={props.friendCode}
@@ -63,39 +64,39 @@ export function TodayScreen(props: TodayScreenProps) {
             </View>
             <Text style={styles.codeLength}>{props.friendCode.length}/6</Text>
             <View style={styles.codeActions}>
-              <SmallButton label="코드 붙여넣기" onPress={props.onPasteCode} />
-              <SmallButton label="코드 만들기" onPress={props.onGenerateCode} />
+              <SmallButton label={t('friend.pasteCode')} onPress={props.onPasteCode} />
+              <SmallButton label={t('friend.createCode')} onPress={props.onGenerateCode} />
             </View>
             {!props.friendStatus && (
-              <SmallButton label={props.friendBusy ? '연결 중…' : '친구 코드로 연결'} onPress={props.onJoin} />
+              <SmallButton label={props.friendBusy ? t('friend.connecting') : t('friend.joinWithCode')} onPress={props.onJoin} />
             )}
             {props.pendingJoin && (
-              <SmallButton label={props.friendBusy ? '승인 중…' : '친구 참가 승인'} onPress={props.onApprove} />
+              <SmallButton label={props.friendBusy ? t('friend.approving') : t('friend.approveJoin')} onPress={props.onApprove} />
             )}
             {props.friendStatus && (
               <Text style={styles.codeHint}>
-                {props.friendStatus === 'active' ? '친구 연결 완료' : props.friendStatus === 'pending' ? '친구 승인 대기 중' : '친구 참가 대기 중'}
+                {props.friendStatus === 'active' ? t('friend.statusActive') : props.friendStatus === 'pending' ? t('friend.statusPending') : t('friend.statusWaiting')}
               </Text>
             )}
           </View>
         )}
 
-        <Text style={styles.sectionTitle}>오늘의 컬러 룰렛</Text>
-        <Text style={styles.sectionSubtitle}>하루에 한 번, 오늘 입을 색을 골라드려요.</Text>
+        <Text style={styles.sectionTitle}>{t('today.rouletteTitle')}</Text>
+        <Text style={styles.sectionSubtitle}>{t('today.rouletteSubtitle')}</Text>
         <RouletteMachine color={props.revealed ? props.color.hex : undefined} />
 
         {props.revealed ? (
           <View style={styles.resultCard}>
             <View style={[styles.largeSwatch, { backgroundColor: props.color.hex }]} />
             <View style={styles.resultCopy}>
-              <Text style={styles.eyebrow}>오늘의 컬러 확정</Text>
+              <Text style={styles.eyebrow}>{t('today.resultEyebrow')}</Text>
               <Text style={styles.colorName}>{props.color.name}</Text>
               <Text style={styles.colorMood}>{props.color.mood}</Text>
             </View>
           </View>
         ) : (
           <Pressable accessibilityRole="button" onPress={props.onReveal} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>오늘의 컬러 뽑기</Text>
+            <Text style={styles.primaryButtonText}>{t('today.reveal')}</Text>
           </Pressable>
         )}
 
@@ -106,7 +107,7 @@ export function TodayScreen(props: TodayScreenProps) {
             style={styles.primaryButton}
           >
             <Text style={styles.primaryButtonText}>
-              {props.hasRecord ? '오늘의 공유 카드 보기' : 'OOTD 촬영하기'}
+              {props.hasRecord ? t('today.openShareCard') : t('today.capture')}
             </Text>
           </Pressable>
         )}
