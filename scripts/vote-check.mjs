@@ -99,6 +99,13 @@ const soloCard = await call('혼자 카드 조회', `?action=card&t=${solo.body?
 check('혼자 카드가 사진 1장을 준다', soloCard.body?.kind === 'entry' && soloCard.body?.images?.length === 1, JSON.stringify(soloCard.body));
 check('이미지 주소가 공개 함수 주소다', soloCard.body?.images?.[0]?.startsWith(`${functionUrl}?action=img`), JSON.stringify(soloCard.body?.images));
 
+// 3-1. 차단용 익명 업로더 해시 — 브라우저가 이 값으로만 거른다
+const soloUploader = soloCard.body?.uploaders?.[0];
+check('카드가 익명 업로더 해시를 준다', typeof soloUploader === 'string' && /^[0-9a-f]{16}$/.test(soloUploader), JSON.stringify(soloCard.body?.uploaders));
+check('업로더 해시가 기기 토큰·기기 ID를 노출하지 않는다',
+  soloUploader && !String(deviceA?.deviceToken).includes(soloUploader) && !String(deviceA?.deviceId).includes(soloUploader),
+  JSON.stringify({ soloUploader }));
+
 const soloImage = await call('혼자 썸네일', `?action=img&t=${solo.body?.shareToken}&side=a`, { method: 'GET', raw: true });
 check('썸네일 바이트가 온다', soloImage.bytes?.length > 0, `status ${soloImage.status}`);
 
@@ -117,6 +124,11 @@ check('두 사람이 공개하면 대결 링크가 생긴다', typeof matchToken
 
 const matchCard = await call('대결 카드 조회', `?action=card&t=${matchToken}`, { method: 'GET' });
 check('대결 카드가 사진 2장을 준다', matchCard.body?.kind === 'match' && matchCard.body?.images?.length === 2, JSON.stringify(matchCard.body));
+
+// 4-1. 대결 카드의 업로더 해시 — 두 사람이 다르고, 같은 기기는 카드가 달라도 같은 값이다
+const matchUploaders = matchCard.body?.uploaders ?? [];
+check('대결 카드가 업로더 해시 2개를 준다', matchUploaders.length === 2 && matchUploaders[0] !== matchUploaders[1], JSON.stringify(matchUploaders));
+check('같은 기기의 업로더 해시가 카드마다 같다', matchUploaders[0] === soloUploader, JSON.stringify({ soloUploader, matchUploaders }));
 const voter = makeVoter();
 
 const sideB = await call('대결 B 썸네일', `?action=img&t=${matchToken}&side=b`, { method: 'GET', raw: true });

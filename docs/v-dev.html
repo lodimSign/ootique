@@ -43,6 +43,7 @@
     <div class="reports" id="reports"></div>
     <a class="get" href="#" id="get">앱 받기 · 곧 출시</a>
     <p class="note">Ootique는 매일 하나의 랜덤 컬러를 주고, 그 컬러를 살린 오늘의 옷을 기록하는 앱입니다.</p>
+    <p class="note"><a href="index.html#ugc-policy" style="color:inherit;">부적절한 콘텐츠 무관용 원칙 · 신고 처리 안내</a></p>
 
     <script>
       var API = 'https://lkgipsszgvpcabdefvhc.supabase.co/functions/v1/vote';
@@ -97,6 +98,26 @@
       var reports = document.getElementById('reports');
       var REASONS = [['inappropriate', '부적절한 사진'], ['spam', '스팸'], ['other', '기타']];
       var lastKind = 'entry';
+      var lastUploaders = [];
+
+      // 차단 (앱스토어 UGC 요건). 카드가 주는 익명 업로더 해시만 이 브라우저에 저장한다.
+      // 실명·기기 토큰은 서버가 내보내지 않는다.
+      var BLOCK_KEY = 'ootique.blocked';
+      function blockedList() {
+        try { return JSON.parse(localStorage.getItem(BLOCK_KEY)) || []; } catch (error) { return []; }
+      }
+      function addBlocked(hash) {
+        var list = blockedList();
+        if (list.indexOf(hash) === -1) list.push(hash);
+        try { localStorage.setItem(BLOCK_KEY, JSON.stringify(list)); } catch (error) { /* 사파리 비공개 모드 */ }
+      }
+      function showBlocked() {
+        card.innerHTML = '';
+        card.className = '';
+        reports.innerHTML = '';
+        title.textContent = '차단한 사람의 카드예요';
+        msg.textContent = '이 사람의 사진은 이 브라우저에서 더 보이지 않아요.';
+      }
 
       function renderReports() {
         reports.innerHTML = '';
@@ -113,12 +134,16 @@
       function askReason(side) {
         reports.innerHTML = '';
         msg.textContent = '신고 사유를 골라주세요.';
-        REASONS.concat([['cancel', '취소']]).forEach(function (pair) {
+        var options = REASONS.slice();
+        // 서버가 업로더 해시를 주는 카드에서만 차단을 보여준다 (구버전 응답 대비).
+        if (lastUploaders[side === 'b' ? 1 : 0]) options.push(['block', '이 사람 더 안 보기(차단)']);
+        options.concat([['cancel', '취소']]).forEach(function (pair) {
           var button = document.createElement('button');
           button.className = 'report';
           button.textContent = pair[1];
           button.addEventListener('click', function () {
             if (pair[0] === 'cancel') { msg.textContent = ''; renderReports(); return; }
+            if (pair[0] === 'block') { addBlocked(lastUploaders[side === 'b' ? 1 : 0]); showBlocked(); return; }
             sendReport(side, pair[0]);
           });
           reports.appendChild(button);
@@ -149,6 +174,10 @@
 
       function render(data) {
         lastKind = data.kind;
+        lastUploaders = data.uploaders || [];
+        // 차단한 업로더가 한 명이라도 있으면 카드 전체를 숨긴다.
+        var blocked = blockedList();
+        if (lastUploaders.some(function (hash) { return blocked.indexOf(hash) !== -1; })) { showBlocked(); return; }
         renderReports();
         if (data.kind !== 'match') {
           title.textContent = '오늘의 컬러를 입고 나왔어요';

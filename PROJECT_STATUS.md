@@ -4,7 +4,7 @@
 
 ## 지금 상태 한 줄
 
-공개 투표 신고 기능(C단계 UGC 첫 항목)이 8/7에 서버·프리뷰까지 반영됐다. 실사용자 페이지(v.html) 교체만 lodim 지시 대기.
+C단계 UGC 요건(신고·차단·무관용 EULA·처리 절차)이 8/7에 서버·프리뷰·문서까지 전부 반영됐다. 실사용자 페이지(v.html) 교체만 lodim 지시 대기.
 
 ## 프리뷰 자동 반영 규칙 (2026-08-07 lodim 승인, 상시)
 
@@ -41,7 +41,7 @@
 2. ~~A단계 서버 배포와 검사~~ — 2026-08-06 완료. `db push`, `functions deploy vote`, `npm run test:vote` 전부 통과. 기존 `test:friend-sync:e2e`도 회귀 없이 통과.
 3. ~~에뮬레이터 Expo Go로 공개 스위치 → 저장 → 링크 공유 화면 확인~~ — 2026-08-06 완료. 아래 `알려진 점`에 결과를 적었다.
 4. 공개 사진이 실제로 서버에 올라가기 시작하는 시점에 `docs/index.html` 처리방침과 `docs/app-store-metadata.md` 개인정보 표시를 같이 고친다. **기능보다 먼저 고치면 사실과 다르고, 늦게 고치면 허위 표시다.**
-5. B단계 순위 탭, C단계 UGC 나머지 3종(차단·처리 절차·무관용 EULA). ~~신고~~ — 2026-08-07 완료: `vote_reports` 테이블(같은 기기 중복 1회, 3회 자동 숨김·삭제 없음) + `vote` 함수 `action=report` + 프리뷰 `v-dev.html` 신고 UI + `test:vote` 신고 검사 8건 실서버 통과. v.html 교체는 lodim 확인 뒤.
+5. B단계 순위 탭. ~~C단계 UGC 나머지 3종(차단·처리 절차·무관용 EULA)~~ — 2026-08-07 완료. ~~신고~~ — 2026-08-07 완료: `vote_reports` 테이블(같은 기기 중복 1회, 3회 자동 숨김·삭제 없음) + `vote` 함수 `action=report` + 프리뷰 `v-dev.html` 신고 UI + `test:vote` 신고 검사 8건 실서버 통과. 차단: 카드 응답에 익명 업로더 해시(`uploaders`, pepper 섞은 sha256 앞 16자, 하위호환 필드)를 추가 배포했고 `v-dev.html` 신고 시트의 `이 사람 더 안 보기(차단)`가 localStorage로 그 업로더의 카드를 숨긴다. EULA: `docs/index.html#ugc-policy`에 무관용 원칙·24시간 내 검토·연락처(GitHub issues) 절을 넣고 `v-dev.html` 하단에서 링크한다 — **연락처에 개발자 이메일을 공개할지는 lodim 결정 대기**. v.html 교체는 lodim 확인 뒤.
 6. 두 기기에서 코드 생성 → 참가 승인 → 각자 업로드 → 상대 사진 자동 표시를 수동 확인한다. **B 업로드와 PNG 스크린샷·고해상도 원본까지 본다**. 절차는 `docs/app-development-manual.md` 2.2절.
 7. App Store Connect에 `com.lodim.ootique.plus` 비소모성 상품을 만들고 4,900원 가격대로 설정한다.
 8. 구매 성공·취소·실패·보류·복원·앱 재실행과 8일째 삭제를 개발 빌드에서 확인한다.

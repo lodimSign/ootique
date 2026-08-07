@@ -199,7 +199,7 @@ async function unpublish(req: Request, body: Record<string, unknown>) {
   return json(200, { status: 'hidden' });
 }
 
-type Side = { entryId: string; thumbKey: string; colorId: string };
+type Side = { entryId: string; thumbKey: string; colorId: string; deviceId: string };
 
 async function resolveToken(token: string) {
   const { data: match } = await supabase
@@ -210,7 +210,7 @@ async function resolveToken(token: string) {
   if (match) {
     const { data: entries } = await supabase
       .from('vote_entries')
-      .select('id,thumb_key,color_id,status')
+      .select('id,thumb_key,color_id,status,device_id')
       .in('id', [match.entry_a, match.entry_b]);
     const a = entries?.find((item) => item.id === match.entry_a);
     const b = entries?.find((item) => item.id === match.entry_b);
@@ -219,22 +219,28 @@ async function resolveToken(token: string) {
       kind: 'match' as const,
       matchId: match.id,
       sides: [
-        { entryId: a.id, thumbKey: a.thumb_key!, colorId: a.color_id },
-        { entryId: b.id, thumbKey: b.thumb_key!, colorId: b.color_id },
+        { entryId: a.id, thumbKey: a.thumb_key!, colorId: a.color_id, deviceId: a.device_id },
+        { entryId: b.id, thumbKey: b.thumb_key!, colorId: b.color_id, deviceId: b.device_id },
       ] as Side[],
     };
   }
   const { data: entry } = await supabase
     .from('vote_entries')
-    .select('id,thumb_key,color_id,status')
+    .select('id,thumb_key,color_id,status,device_id')
     .eq('share_token', token)
     .maybeSingle();
   if (!entry || entry.status !== 'public') return null;
   return {
     kind: 'entry' as const,
     matchId: null,
-    sides: [{ entryId: entry.id, thumbKey: entry.thumb_key!, colorId: entry.color_id }] as Side[],
+    sides: [{ entryId: entry.id, thumbKey: entry.thumb_key!, colorId: entry.color_id, deviceId: entry.device_id }] as Side[],
   };
+}
+
+// 차단(웹)용 익명 업로더 식별자. device_id 자체나 기기 토큰을 내보내지 않고
+// pepper를 섞은 해시 앞 16자만 준다 — 브라우저는 이 값으로만 거른다.
+async function uploaderHash(deviceId: string) {
+  return (await sha256(`${deviceId}:uploader:${voteSecret}`)).slice(0, 16);
 }
 
 // 먼저 공개한 사람은 대결 링크가 아직 없다. 상대가 공개한 뒤 다시 물으면 대결 링크를 돌려준다.
@@ -291,6 +297,8 @@ async function card(url: URL) {
     kind: resolved.kind,
     colorId: resolved.sides[0].colorId,
     images: resolved.sides.map((_, index) => `${base}&side=${index === 0 ? 'a' : 'b'}`),
+    // 하위호환 필드 추가 — 기존 페이지는 무시한다. 차단 기능이 이 값으로 거른다.
+    uploaders: await Promise.all(resolved.sides.map((side) => uploaderHash(side.deviceId))),
   }, { 'Cache-Control': 'no-store' });
 }
 
